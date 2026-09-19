@@ -1,26 +1,26 @@
-# Plan técnico — MVP de ToqueTin
+# Plan técnico — MVP multiplataforma de ToqueTin
 
 ## 1. Propósito y restricciones
 
-Este documento define cómo implementar el MVP descrito en `spec.md`. La solución será una aplicación web multi-tenant que cubra el flujo `Crear pedido → Generar QR → Abrir seguimiento → Preparando → Listo → Entregado`, incluyendo cancelación previa a `Listo`, seguimiento en tiempo real, avisos progresivos, trazabilidad y dashboard operativo.
+Este documento define cómo implementar el MVP descrito en `spec.md`. La solución será un monorepo multi-tenant con web universal y clientes de seguimiento ligeros para iOS y Android. Cubrirá el flujo `Crear pedido → Generar QR → Abrir seguimiento → Preparando → Listo → Entregado`, incluyendo cancelación previa a `Listo`, seguimiento visible fuera de la aplicación, trazabilidad y dashboard operativo.
 
 El plan obedece estas reglas:
 
-- Usar únicamente Next.js, TypeScript y Supabase/PostgreSQL como stack principal.
+- Usar Next.js, TypeScript y Supabase/PostgreSQL como núcleo; SwiftUI/ActivityKit y Kotlin/Compose serán adaptadores nativos de seguimiento.
 - Mantener la lógica de dominio, autorización y persistencia fuera de los componentes visuales.
 - Persistir los pedidos, estados, sesiones de seguimiento, suscripciones y notificaciones relevantes en PostgreSQL.
 - Mantener código, tablas, columnas, tipos, logs y contratos en inglés; los textos visibles serán inicialmente en español.
 - Aplicar aislamiento por restaurante en la aplicación y mediante Row Level Security (RLS).
-- No introducir funciones excluidas por la spec ni microservicios.
+- No introducir funciones excluidas por la spec ni microservicios. App Clip, Live Activity y Android ligero quedan expresamente incluidos por RF-14.
 - Tratar el aviso visual de `READY` como garantía funcional; sonido, vibración y Web Push serán mejoras progresivas que nunca bloquearán el seguimiento.
 
-**Cobertura:** `[RF-1–RF-13]`.
+**Cobertura:** `[RF-1–RF-14]`.
 
 ## 2. Arquitectura y estructura de módulos
 
 ### 2.1. Forma general
 
-Se implementará un monolito modular. Next.js compondrá rutas, Server Components, Server Actions y Route Handlers; Supabase proveerá Auth, PostgreSQL, RLS, Realtime y una función de borde para Web Push. No habrá un backend o servicio independiente adicional.
+Se implementará un monolito modular. Next.js compondrá rutas, Server Components, Server Actions y Route Handlers; Supabase proveerá Auth, PostgreSQL, RLS, Realtime y una función de borde para Web Push, APNs y FCM. Los proyectos iOS y Android consumirán contratos públicos limitados al tracking. No habrá un backend independiente adicional.
 
 La dirección permitida de dependencias será:
 
@@ -38,16 +38,17 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 | `tracking` | Token, QR, intercambio por sesión, proyección pública, revocación y expiración | Nunca acepta `order_number` como credencial ni expone IDs internos | RF-2, RF-3, RF-10, RF-12 |
 | `realtime` | Broadcast privado, autorización de tópicos, reconexión y actualización manual | Publica una proyección mínima, no filas completas | RF-6, RF-7, RF-11, RF-13 |
 | `notifications` | Consentimiento, sonido, vibración, Web Push, suscripciones, outbox y reintentos | Ningún fallo revierte o bloquea el cambio a `READY` | RF-7, RF-8 |
+| `native-tracking` | App Clip, Live Activity, App Links y Live Updates Android | Solo representa la proyección pública; no decide transiciones | RF-6–RF-8, RF-10, RF-12–RF-14 |
 | `dashboard` | Jornada operativa, listados, agrupaciones, totales y promedios | No consolida restaurantes distintos | RF-11, RF-12 |
-| `persistence` | Migraciones, constraints, índices, funciones transaccionales, triggers, grants y RLS | Sin escrituras de negocio parciales desde la UI | RF-1–RF-13 |
-| `shared` | Validación, errores, fechas UTC, zona horaria, normalización y DTO seguros | No contiene reglas específicas de presentación | RF-1–RF-13 |
+| `persistence` | Migraciones, constraints, índices, funciones transaccionales, triggers, grants y RLS | Sin escrituras de negocio parciales desde la UI | RF-1–RF-14 |
+| `shared` | Validación, errores, fechas UTC, zona horaria, normalización y DTO seguros | No contiene reglas específicas de presentación | RF-1–RF-14 |
 
 ### 2.3. Superficies de aplicación
 
 - **Acceso del operador:** inicio y cierre de sesión con correo y contraseña. Las cuentas y membresías se aprovisionan previamente; no habrá registro público, recuperación de contraseña ni administración de usuarios en el MVP. `[RF-12]`
 - **Operación del restaurante:** selección del restaurante activo, dashboard diario, creación de pedidos, presentación del QR, actualización de estimación y acciones de estado. `[RF-1, RF-2, RF-4, RF-5, RF-9, RF-11, RF-13]`
 - **Seguimiento público:** intercambio inicial del token, vista sin registro visible, snapshot público, suscripción en tiempo real, reintento manual y activación opcional de avisos. `[RF-2, RF-3, RF-6–RF-8, RF-10, RF-12, RF-13]`
-- **Procesamiento asíncrono:** despacho y reintento de notificaciones Web Push a partir de una bandeja de salida persistente. `[RF-7, RF-8]`
+- **Procesamiento asíncrono:** despacho y reintento de Web Push, ActivityKit/APNs y FCM a partir de una bandeja de salida persistente. `[RF-7, RF-8, RF-14]`
 
 ## 3. Tipos y reglas de dominio
 
@@ -57,6 +58,8 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 - `CancellationReasonCode`: `CUSTOMER_REQUEST`, `PRODUCT_UNAVAILABLE`, `ORDER_ERROR`, `OPERATIONAL_ISSUE`, `OTHER`.
 - `NotificationStatus`: `PENDING`, `SENT`, `FAILED`, `EXPIRED`.
 - `NotificationKind`: `ORDER_READY`.
+- `DeliveryChannel`: `WEB_PUSH`, `APNS_LIVE_ACTIVITY`, `FCM_LIVE_UPDATE`.
+- `DeliveryEventKind`: `TRACKING_STARTED`, `STATUS_CHANGED`, `ESTIMATE_CHANGED`, `ORDER_READY`, `ORDER_CLOSED`, `TRACKING_REVOKED`.
 - `RestaurantUserRole`: `OPERATOR`.
 
 **Cobertura:** `[RF-4, RF-5, RF-8, RF-12]`.
@@ -98,7 +101,7 @@ Una petición que repita exactamente una transición ya aplicada devolverá el e
 - No habrá borrado de pedidos ni eventos de historial en el MVP; las relaciones críticas usarán borrado restringido.
 - Las tablas expuestas tendrán RLS y grants mínimos. Las tablas con material de Web Push vivirán en un esquema no expuesto.
 
-**Cobertura:** `[RF-1–RF-13]`.
+**Cobertura:** `[RF-1–RF-14]`.
 
 ### 4.2. Entidades
 
@@ -231,47 +234,19 @@ La PK será `(tracking_session_id, auth_user_id)`. La autorización de Realtime 
 
 **Cobertura:** `[RF-2, RF-3, RF-6, RF-10, RF-12]`.
 
-#### `private.push_subscriptions`
+#### `private.delivery_channels`
 
-| Campo | Tipo conceptual | Regla |
-|---|---|---|
-| `id` | bigint | PK interna |
-| `auth_user_id` | uuid | propietario anónimo |
-| `endpoint`, `p256dh_key`, `auth_key` | text | material Web Push; nunca expuesto al cliente después del registro |
-| `endpoint_digest` | text | hash único para idempotencia |
-| `revoked_at`, `expires_at` | timestamptz nullable | vigencia del navegador |
-| `last_error_code` | text nullable | diagnóstico sin datos sensibles |
-| `created_at`, `updated_at` | timestamptz | UTC |
+Registra el transporte autorizado para una sesión de tracking: `WEB_PUSH`, `APNS_LIVE_ACTIVITY` o `FCM_LIVE_UPDATE`. El token se almacena cifrado con AES-GCM, acompañado solo por un digest SHA-256 para idempotencia, capacidades JSON, vigencia, revocación y última observación. La combinación `(tracking_session_id, channel, token_digest)` será única.
 
-**Índices:** `endpoint_digest` único y `auth_user_id`.
+#### `private.delivery_outbox`
 
-**Cobertura:** `[RF-8, RF-12]`.
+Conserva un evento por `(order_id, event_kind, order_version)` después del commit. El payload contiene únicamente la proyección pública mínima necesaria para actualizar la superficie del sistema.
 
-#### `private.tracking_push_subscriptions`
+#### `private.delivery_attempts`
 
-Asocia una suscripción del navegador con una sesión de tracking mediante `(tracking_session_id, push_subscription_id)`, `enabled_at` y `disabled_at`. Esta tabla permite que el mismo navegador siga más de un pedido sin duplicar el endpoint.
+Asocia cada evento con cada canal vigente y registra estado, intentos, próxima ejecución, latencia y código de error redactado. Los reintentos ocurren al minuto 1 y minuto 5, con máximo tres intentos.
 
-**Cobertura:** `[RF-8, RF-10]`.
-
-#### `private.notifications`
-
-| Campo | Tipo conceptual | Regla |
-|---|---|---|
-| `id` | bigint | PK interna |
-| `order_id`, `tracking_session_id`, `push_subscription_id` | bigint | referencias obligatorias |
-| `kind` | `NotificationKind` | `ORDER_READY` |
-| `status` | `NotificationStatus` | inicialmente `PENDING` |
-| `attempt_count` | smallint | máximo tres intentos totales |
-| `next_attempt_at` | timestamptz | reintentos al minuto 1 y minuto 5 |
-| `sent_at` | timestamptz nullable | éxito confirmado |
-| `last_error_code` | text nullable | sin endpoint ni token |
-| `created_at`, `updated_at` | timestamptz | UTC |
-
-La combinación `(order_id, push_subscription_id, kind)` será única. Antes de enviar, el procesador comprobará que el pedido aún está `READY`, que tracking y suscripción siguen vigentes y que el cliente activó avisos; en caso contrario marcará `EXPIRED`.
-
-**Índice parcial:** `(status, next_attempt_at)` para `PENDING` y `FAILED` con intentos restantes.
-
-**Cobertura:** `[RF-7, RF-8, RF-10]`.
+**Cobertura:** `[RF-6–RF-10, RF-12–RF-14]`.
 
 ### 4.3. Ejemplo JSON del agregado interno
 
@@ -370,7 +345,7 @@ No contiene IDs internos, organización, actores, historial interno ni token:
 - `service_role`, secretos HMAC y clave privada VAPID existirán solo en servidor o función de borde.
 - Los logs redactarán tokens, endpoints, claves push, cookies y credenciales.
 
-**Cobertura:** `[RF-1–RF-13]`.
+**Cobertura:** `[RF-1–RF-14]`.
 
 ## 6. Contratos de aplicación
 
@@ -388,18 +363,21 @@ Los nombres siguientes son contratos lógicos. Las operaciones autenticadas se i
 | `getPublicTrackingSnapshot` | anonymous session, public nonce | `PublicTrackingSnapshot` | errores de tracking no enumerables | RF-3, RF-6, RF-10, RF-12, RF-13 |
 | `revokeTrackingSession` | operator session, order | tracking revocado | `FORBIDDEN`, `CONFLICT` | RF-10, RF-12 |
 | `enableReadyAlerts` | anonymous session, public nonce, Web Push subscription | canales activados y capacidades | `TRACKING_EXPIRED`, `PERMISSION_UNAVAILABLE` | RF-8, RF-10 |
+| `registerDeliveryChannel` | sesión de tracking, nonce, plataforma, token y capacidades | registro público y vigencia | `TRACKING_EXPIRED`, `DELIVERY_REGISTRATION_FAILED` | RF-8, RF-10, RF-14 |
+| `refreshDeliveryChannelToken` | registro y token rotado | registro actualizado | `TRACKING_EXPIRED`, `FORBIDDEN` | RF-10, RF-14 |
+| `disableDeliveryChannel` | registro vigente | canal revocado | `FORBIDDEN`, `CONFLICT` | RF-10, RF-14 |
 | `getDashboardSummary` | operator session, restaurant, optional journey | pedidos agrupados y `DashboardSummary` | `FORBIDDEN`, `VALIDATION_ERROR` | RF-11, RF-12 |
 
 ### 6.1. DTO públicos
 
-- `PublicTrackingSnapshot`: restaurante, número visible, estado, estimación vigente, momento de actualización, instrucciones, motivo de cancelación visible, expiración y momento de última actualización.
+- `PublicTrackingSnapshot`: restaurante, número visible, estado, `estimatedReadyAt`, `serverTime`, `version`, `activityExpiresAt`, instrucciones, motivo de cancelación visible y momento de última actualización.
 - `DashboardSummary`: intervalo operativo, conteos por estado, total creado, total activo, `averagePreparationSeconds: number | null` y `averagePickupSeconds: number | null`.
 
 ### 6.2. Catálogo de errores
 
 Los contratos devolverán códigos estables en inglés y la UI los traducirá a español. Accesos inválidos, inexistentes, manipulados, expirados o revocados compartirán una respuesta pública no enumerable. Los errores no incluirán IDs de otros tenants, SQL, claims, tokens ni trazas internas.
 
-**Cobertura:** `[RF-1–RF-13]`.
+**Cobertura:** `[RF-1–RF-14]`.
 
 ## 7. Flujo base y flujos alternos
 
@@ -439,13 +417,13 @@ Los contratos devolverán códigos estables en inglés y la UI los traducirá a 
 
 1. El cambio visual a `READY` ocurre siempre y no depende de permisos.
 2. Si el cliente pulsó «Avísame cuando esté listo», se intentan sonido y vibración disponibles.
-3. La misma transacción de `READY` crea una notificación idempotente por asociación push activa mediante un trigger interno.
+3. Después del commit, un trigger interno crea el evento idempotente de outbox y sus intentos por cada canal vigente.
 4. Un webhook asíncrono invoca la función de borde después del commit.
-5. El procesador envía Web Push con la clave VAPID privada y registra el resultado.
+5. El procesador envía Web Push, ActivityKit/APNs o FCM con sus credenciales privadas y registra el resultado.
 6. Los intentos fallidos se repiten al minuto 1 y minuto 5, con máximo tres intentos totales. Una tarea programada procesa pendientes que no recibieron el webhook inicial.
 7. Un fallo definitivo queda auditado y nunca cambia el estado `READY` ni oculta el aviso visual.
 
-**Cobertura:** `[RF-7, RF-8, RF-9]`.
+**Cobertura:** `[RF-7–RF-9, RF-14]`.
 
 ### 7.5. Cancelación y entrega
 
@@ -485,8 +463,8 @@ Los contratos devolverán códigos estables en inglés y la UI los traducirá a 
 
 | Decisión | Justificación | Alternativa descartada | Motivo del descarte | RF |
 |---|---|---|---|---|
-| Monolito modular | Menor complejidad operativa y transacciones locales claras | Microservicios | Infraestructura prematura para un único flujo | RF-1–RF-13 |
-| Server Components y servidor por defecto | Reduce datos y secretos en cliente | Aplicación totalmente cliente | Mayor superficie de autorización y exposición accidental | RF-1–RF-13 |
+| Monolito modular | Menor complejidad operativa y transacciones locales claras | Microservicios | Infraestructura prematura para un único flujo | RF-1–RF-14 |
+| Server Components y servidor por defecto | Reduce datos y secretos en cliente | Aplicación totalmente cliente | Mayor superficie de autorización y exposición accidental | RF-1–RF-14 |
 | Supabase Auth con cuentas preaprovisionadas | Satisface operador autorizado sin ampliar onboarding | Registro público o proveedor social | Fuera de alcance y dependencias adicionales | RF-12 |
 | Sesión anónima invisible | Permite Realtime privado sin PII ni registro visible | Acceso universal con rol `anon` | No limita cada cliente a un pedido | RF-2, RF-3, RF-6, RF-12 |
 | RLS más autorización de servidor | Defensa en profundidad multi-tenant | Filtros solo en aplicación | Un error de consulta podría filtrar otro restaurante | RF-12 |
@@ -591,7 +569,7 @@ Una entrega solo podrá cerrarse con:
 - Crear tipos, tablas, constraints, índices, grants y RLS mediante la migración inicial.
 - Añadir funciones transaccionales y pruebas pgTAP de tenant, estados e historial.
 
-**Salida:** dominio persistente y aislado antes de construir UI. `[RF-1, RF-4, RF-5, RF-9, RF-11–RF-13]`
+**Salida:** dominio persistente y aislado antes de construir UI. `[RF-1, RF-4, RF-5, RF-9, RF-11–RF-14]`
 
 ### Fase 3 — Operación del restaurante
 
@@ -607,19 +585,19 @@ Una entrega solo podrá cerrarse con:
 
 **Salida:** cliente sigue un único pedido sin registro ni exposición de datos. `[RF-2, RF-3, RF-6, RF-7, RF-10, RF-12, RF-13]`
 
-### Fase 5 — Avisos
+### Fase 5 — Superficies nativas y avisos
 
-- Implementar consentimiento, capacidades del navegador y cambio visual `READY`.
-- Añadir suscripciones, outbox, función Web Push, webhook y reintentos.
+- Implementar consentimiento web, App Clip, Live Activity y app Android ligera.
+- Añadir canales cifrados, outbox, función multitransporte, webhook y reintentos.
 
-**Salida:** avisos progresivos auditables sin bloquear el flujo principal. `[RF-7, RF-8]`
+**Salida:** seguimiento fuera de la app y avisos progresivos auditables sin bloquear el flujo principal. `[RF-7, RF-8, RF-14]`
 
 ### Fase 6 — Dashboard y endurecimiento
 
 - Implementar corte vigente/pendiente, listados, conteos y promedios.
 - Completar E2E, matriz de dispositivos, asesores, build y revisión de secretos.
 
-**Salida:** operación diaria verificable y todos los criterios de finalización cubiertos. `[RF-1–RF-13]`
+**Salida:** operación diaria verificable y todos los criterios de finalización cubiertos. `[RF-1–RF-14]`
 
 ## 12. Matriz de trazabilidad final
 
@@ -647,5 +625,5 @@ Una entrega solo podrá cerrarse con:
 - El historial se conserva indefinidamente en el MVP.
 - El cliente no proporciona nombre, correo, teléfono ni otro PII.
 - El operador puede volver a presentar el mismo QR vigente porque el token se regenera; revocar el tracking no borra ni reabre el pedido.
-- La disponibilidad de Push depende del navegador, permisos y plataforma; el cambio visual sigue siendo suficiente para completar el flujo.
-- Pagos, menús, carrito, marketplace, fidelización, aplicaciones nativas, POS, hardware avanzado e IA permanecen fuera de alcance.
+- La disponibilidad de Push y superficies nativas depende del dispositivo, permisos y plataforma; el seguimiento web y el cambio visual siguen siendo suficientes para completar el flujo.
+- Pagos, menús, carrito, marketplace, fidelización, apps móviles completas con cuentas o historial, POS, hardware avanzado e IA permanecen fuera de alcance.

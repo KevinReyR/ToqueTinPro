@@ -32,6 +32,7 @@ Persona que espera un pedido. Accede al seguimiento mediante el QR, sin cuenta, 
 - **HU-10 — Auditar cambios:** Como responsable del restaurante, quiero que cada cambio de estado quede registrado para poder reconstruir el ciclo de un pedido.
 - **HU-11 — Ajustar estimación:** Como operador, quiero corregir la estimación de un pedido que aún no está listo para mantener informado al cliente ante cambios en la preparación.
 - **HU-12 — Definir el día operativo:** Como operador, quiero establecer la hora de corte del restaurante para que el dashboard represente correctamente su jornada habitual.
+- **HU-13 — Mantener el pedido visible:** Como cliente, quiero ver el número, estado y tiempo restante en la pantalla bloqueada cuando mi dispositivo lo permita, sin perder el seguimiento web si la capacidad nativa no está disponible.
 
 ## 4. Requisitos funcionales
 
@@ -201,6 +202,20 @@ El tiempo estimado de preparación deberá ser definido manualmente al crear el 
 - Mientras el pedido no haya alcanzado un estado final, el seguimiento deberá diferenciar claramente la estimación vigente del estado real.
 - Cuando el pedido pase a `Listo`, el producto deberá priorizar el aviso de retiro sobre la estimación inicial.
 
+### RF-14. Ofrecer seguimiento visible fuera de la aplicación
+
+El mismo QR deberá abrir la mejor superficie disponible: App Clip en iOS, app instalada mediante App Link en Android o seguimiento web como fallback universal. Las superficies nativas serán opcionales y mostrarán la misma proyección pública del pedido.
+
+**Criterios de aceptación EARS:**
+
+- Cuando un iPhone compatible abra el App Clip desde el QR y Live Activities esté habilitado, el producto deberá iniciar automáticamente una Live Activity asociada únicamente al pedido validado.
+- Cuando cambie estado o estimación, el backend deberá publicar una actualización idempotente para las superficies nativas registradas después de confirmar la transacción del pedido.
+- Mientras el pedido esté `Recibido` o `Preparando`, la superficie deberá mostrar una cuenta regresiva aproximada; si la estimación vence, deberá mostrar «Casi listo» y nunca un tiempo negativo.
+- Cuando el pedido pase a `Listo`, la superficie deberá reemplazar la estimación por una indicación inequívoca de retiro y usar una alerta perceptible permitida por la plataforma.
+- Cuando el pedido pase a `Entregado` o `Cancelado`, la actividad deberá terminar y podrá conservar el resultado final hasta 15 minutos; una revocación deberá retirarla inmediatamente.
+- Si la capacidad nativa está deshabilitada, falla, no existe o el cliente rechaza permisos, el seguimiento web deberá permanecer completo y utilizable.
+- El producto no deberá incluir PII, tokens, IDs internos ni instrucciones sensibles en Lock Screen, Dynamic Island o notificaciones.
+
 ## 5. Requisitos no funcionales
 
 ### RNF-1. Seguridad
@@ -220,11 +235,13 @@ El tiempo estimado de preparación deberá ser definido manualmente al crear el 
 - Ningún usuario del restaurante deberá consultar o modificar información fuera de sus autorizaciones vigentes.
 - La información de dos restaurantes no deberá mezclarse en vistas, búsquedas, totales ni acciones.
 
-### RNF-4. Experiencia móvil
+### RNF-4. Experiencia móvil y multiplataforma
 
 - El seguimiento deberá priorizar pantallas móviles y permitir entender el estado actual en pocos segundos.
 - Las acciones esenciales deberán ser legibles, distinguibles y utilizables mediante interacción táctil.
 - El flujo no deberá depender de instalar una aplicación.
+- El App Clip y las apps ligeras deberán limitarse al seguimiento de pedidos y compartir contratos con la web.
+- La experiencia mínima será iOS 16.1 y Android API 26; las Live Updates promovidas se habilitarán en Android 16+.
 
 ### RNF-5. Accesibilidad
 
@@ -283,7 +300,7 @@ El tiempo estimado de preparación deberá ser definido manualmente al crear el 
 - Programas de fidelización.
 - Captura de nombre, correo electrónico o teléfono del cliente.
 - Pedidos que involucren más de un restaurante.
-- Aplicaciones móviles nativas o funciones exclusivas de ellas.
+- Aplicaciones móviles completas con cuentas, historial, pagos o funciones distintas del seguimiento ligero aprobado.
 - Localizadores físicos o hardware avanzado para el cliente.
 - Integraciones con sistemas de punto de venta.
 - Predicción automática de tiempos o decisiones basadas en inteligencia artificial.
@@ -313,3 +330,5 @@ La funcionalidad se considerará terminada cuando se pueda demostrar que:
 16. Los promedios incluyen únicamente intervalos que terminan dentro de la jornada mostrada y excluyen cancelados e intervalos incompletos.
 17. La hora de corte comienza en `00:00` de la hora local, cualquier operador autorizado puede cambiarla y el cambio solo afecta la jornada siguiente.
 18. Todos los casos límite definidos tienen un resultado verificable y comprensible para el usuario afectado.
+19. Un QR válido abre App Clip, app instalada o web según la plataforma, siempre con fallback web.
+20. En dispositivos nativos compatibles, `Pedido 143 · Preparando · ~4 min` permanece visible y converge al estado autoritativo hasta el cierre o revocación.

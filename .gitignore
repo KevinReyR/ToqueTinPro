@@ -1,0 +1,15 @@
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.local
+*.xcuserstate
+*.tsbuildinfo
+DerivedData/
+.gradle/
+local.properties
+apps/android/app/google-services.json
+apps/ios/ToqueTin.xcodeproj/
+supabase/.temp/

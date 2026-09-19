@@ -1,0 +1,98 @@
+name: ToqueTin
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.1"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    TRACKING_BASE_URL: "https://track.example.com"
+targets:
+  OrderTrackingCore:
+    type: framework
+    platform: iOS
+    sources: [Sources/OrderTrackingCore]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.OrderTrackingCore
+  TrackingUI:
+    type: framework
+    platform: iOS
+    sources: [Sources/TrackingUI]
+    dependencies:
+      - target: OrderTrackingCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.TrackingUI
+  ToqueTin:
+    type: application
+    platform: iOS
+    sources: [Sources/ToqueTinApp]
+    dependencies:
+      - target: OrderTrackingCore
+      - target: TrackingUI
+      - target: OrderLiveActivity
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin
+        INFOPLIST_FILE: Config/App-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/ToqueTin.entitlements
+  ToqueTinClip:
+    type: application.on-demand-install-capable
+    platform: iOS
+    sources: [Sources/ToqueTinClip]
+    dependencies:
+      - target: OrderTrackingCore
+      - target: TrackingUI
+      - target: OrderClipLiveActivity
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.Clip
+        INFOPLIST_FILE: Config/Clip-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/ToqueTinClip.entitlements
+  OrderLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources: [Sources/OrderLiveActivity]
+    dependencies:
+      - target: OrderTrackingCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.LiveActivity
+        INFOPLIST_FILE: Config/Widget-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/OrderLiveActivity.entitlements
+  OrderClipLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources: [Sources/OrderLiveActivity]
+    dependencies:
+      - target: OrderTrackingCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.Clip.LiveActivity
+        INFOPLIST_FILE: Config/Widget-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/OrderClipLiveActivity.entitlements
+  OrderTrackingCoreTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests/OrderTrackingCoreTests]
+    dependencies:
+      - target: OrderTrackingCore
+schemes:
+  ToqueTin:
+    build:
+      targets:
+        ToqueTin: all
+        OrderTrackingCoreTests: [test]
+    test:
+      targets: [OrderTrackingCoreTests]
+  ToqueTinClip:
+    build:
+      targets:
+        ToqueTinClip: all

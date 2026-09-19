@@ -3,7 +3,7 @@
 ## Proyecto
 Plataforma B2B2C para restaurantes y plazoletas de comida que convierte el celular del cliente en un localizador digital de pedidos. En el MVP, el restaurante crea un pedido, genera un QR seguro y temporal, el cliente lo escanea sin registrarse y puede seguir el estado del pedido en tiempo real hasta recibir una alerta cuando esté listo.
 
-La arquitectura objetivo del MVP es una aplicación web multi-tenant construida con Next.js + TypeScript, Supabase (PostgreSQL, Auth y Realtime), Tailwind CSS y shadcn/ui. La solución debe priorizar simplicidad operativa, baja fricción para el cliente, seguridad mediante tokens no predecibles y trazabilidad completa de los cambios de estado del pedido.
+La arquitectura objetivo del MVP es un monorepo multi-tenant con Next.js + TypeScript y Supabase (PostgreSQL, Auth y Realtime) como núcleo, un App Clip/Live Activity en SwiftUI + ActivityKit y una app Android ligera opcional en Kotlin + Jetpack Compose. La solución debe priorizar simplicidad operativa, baja fricción para el cliente, seguridad mediante tokens no predecibles y trazabilidad completa de los cambios de estado del pedido.
 
 ### Alcance funcional del MVP
 
@@ -25,6 +25,9 @@ Componentes incluidos:
 - Confirmación de entrega.
 - Dashboard administrativo básico.
 - Arquitectura multi-tenant desde el inicio.
+- App Clip de iOS con Live Activity para Lock Screen y Dynamic Island.
+- App Android opcional con Live Update en Android 16+ y notificación persistente en versiones compatibles anteriores.
+- Seguimiento web universal como fallback sin instalación.
 
 Fuera del alcance inicial:
 
@@ -34,8 +37,7 @@ Fuera del alcance inicial:
 - Menús y carrito de compra.
 - Pedidos multi-restaurante.
 - Programa de fidelización.
-- Aplicaciones móviles nativas.
-- App Clips / Live Activities.
+- Aplicaciones móviles completas con cuentas, historial o funcionalidades distintas del seguimiento.
 - Hardware NFC dinámico.
 - Integraciones POS.
 - IA o predicción automática de tiempos.
@@ -156,8 +158,10 @@ No bloquear la funcionalidad principal si el usuario rechaza permisos de notific
 - Lee `docs/constitution.md` y la spec activa antes de tocar código, si existen en el repositorio.
 - Lee este archivo completo antes de implementar cambios significativos.
 - Respeta el alcance del MVP. No añadas funcionalidades de Fase 2 o posteriores salvo petición explícita.
-- No introduzcas publicidad, marketplace, pagos, loyalty, NFC avanzado, App Clips, Live Activities, integración POS ni IA dentro de una tarea del MVP salvo que la tarea lo solicite expresamente.
+- No introduzcas publicidad, marketplace, pagos, loyalty, NFC avanzado, integración POS ni IA dentro de una tarea del MVP salvo que la tarea lo solicite expresamente. App Clip, Live Activities y el cliente Android ligero sí forman parte del alcance vigente.
 - No cambies el stack principal ni añadas frameworks de infraestructura innecesarios sin una razón técnica clara.
+- Los clientes iOS y Android son adaptadores de la proyección pública; no deben duplicar reglas de negocio, autorización ni persistencia.
+- Un cambio de estado o estimación visible fuera de la app debe originarse en el outbox persistente posterior al commit.
 - No introduzcas microservicios para problemas que puedan resolverse adecuadamente dentro de la arquitectura actual.
 - No agregues dependencias si la plataforma o una dependencia ya instalada resuelve el problema de forma razonable.
 - No modifiques migraciones ya aplicadas. Crea una nueva migración para cambios de esquema.

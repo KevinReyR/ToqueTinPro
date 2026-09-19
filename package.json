@@ -1,0 +1,19 @@
+{
+  "name": "toquetin",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev": "pnpm --filter @toquetin/web dev",
+    "build": "pnpm --filter @toquetin/web build",
+    "start": "pnpm --filter @toquetin/web start",
+    "test": "pnpm --filter @toquetin/web test",
+    "test:watch": "pnpm --filter @toquetin/web test:watch",
+    "test:e2e": "pnpm --filter @toquetin/web test:e2e",
+    "lint": "pnpm --filter @toquetin/web lint",
+    "format": "prettier --write .",
+    "typecheck": "pnpm --filter @toquetin/web typecheck"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}
