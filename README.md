@@ -30,3 +30,7 @@ pnpm build
 ```
 
 Los proyectos nativos se compilan en sus toolchains oficiales. Consulta los README dentro de `apps/ios` y `apps/android`.
+
+## Despliegue en Render
+
+El archivo `render.yaml` crea el servicio web desde la raíz del monorepo. Después de vincular el Blueprint en Render, configura las variables de Supabase, APNs, FCM y VAPID que correspondan usando `.env.example` como referencia. Los secretos se introducen únicamente en el panel de Render; nunca se guardan en Git.

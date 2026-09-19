@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: toquetinpro-web
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.20.0
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://toquetinpro-web.onrender.com
+      - key: TRACKING_TOKEN_SECRET
+        generateValue: true
+      - key: DELIVERY_TOKEN_ENCRYPTION_KEY
+        generateValue: true
