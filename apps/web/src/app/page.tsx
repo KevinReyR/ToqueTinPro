@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { OrderBoard } from "@/components/order-board";
 import { SystemPreview } from "@/components/system-preview";
+import { RecoveryRedirect } from "@/components/recovery-redirect";
 
 export default function HomePage() {
   return (
     <div className="app-shell">
+      <RecoveryRedirect />
       <nav className="topbar" aria-label="Principal">
         <Link className="brand" href="/"><Logo /></Link>
         <div className="topbar-meta"><span className="status-dot" /><span>Cocina conectada</span><Link className="button button-accent" href="/preview/tracking">Ver seguimiento</Link></div>
