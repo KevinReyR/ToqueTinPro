@@ -1,4 +1,4 @@
-import { createDecipheriv, createPrivateKey, sign } from "node:crypto";
+import { createDecipheriv, createHash, createPrivateKey, sign } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 
 type DeliveryAttempt = {
@@ -92,8 +92,10 @@ async function completeAttempt(id: number, success: boolean, latencyMs: number, 
 function decryptToken(serialized: string, base64Key: string): string {
   const [ivValue, tagValue, ciphertextValue] = serialized.split(".");
   if (!ivValue || !tagValue || !ciphertextValue) throw new Error("TOKEN_CIPHERTEXT_INVALID");
-  const key = Buffer.from(base64Key, "base64");
-  if (key.length !== 32) throw new Error("DELIVERY_KEY_INVALID");
+  const decodedKey = Buffer.from(base64Key, "base64");
+  const key = decodedKey.length === 32
+    ? decodedKey
+    : createHash("sha256").update(base64Key, "utf8").digest();
   const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivValue, "base64url"));
   decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
   return Buffer.concat([

@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.reinovalabs.toquetin.data.TrackingClient
 import com.reinovalabs.toquetin.data.TrackingLink
+import com.reinovalabs.toquetin.data.TrackingSessionStore
 import com.reinovalabs.toquetin.model.OrderSnapshot
 import com.reinovalabs.toquetin.notifications.TrackingNotifications
 import com.google.firebase.messaging.FirebaseMessaging
@@ -51,7 +52,9 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); openIntent(intent) }
 
     private fun openIntent(intent: Intent) {
-        val link = intent.data?.toString()?.let { runCatching { URI(it) }.getOrNull() }?.let(TrackingLink::parse) ?: return
+        val trackingUri = intent.data?.toString() ?: TrackingSessionStore.load(this) ?: return
+        val link = runCatching { URI(trackingUri) }.getOrNull()?.let(TrackingLink::parse) ?: return
+        TrackingSessionStore.save(this, trackingUri)
         trackingLink = link
         lifecycleScope.launch {
             runCatching { trackingClient.open(link) }
@@ -71,7 +74,10 @@ class MainActivity : ComponentActivity() {
 
     private fun registerToken(link: TrackingLink) {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token: String ->
-            lifecycleScope.launch { runCatching { trackingClient.registerFcmToken(link, token) } }
+            lifecycleScope.launch {
+                runCatching { trackingClient.registerFcmToken(link, token) }
+                    .onFailure { Log.e("ToqueTinTracking", "FCM registration failed: ${it.message}") }
+            }
         }
     }
 

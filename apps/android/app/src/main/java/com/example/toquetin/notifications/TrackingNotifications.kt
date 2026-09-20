@@ -7,10 +7,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.reinovalabs.toquetin.MainActivity
+import com.reinovalabs.toquetin.data.TrackingSessionStore
 import com.reinovalabs.toquetin.model.OrderSnapshot
 
 object TrackingNotifications {
@@ -26,7 +28,9 @@ object TrackingNotifications {
 
     fun show(context: Context, snapshot: OrderSnapshot) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
-        val intent = Intent(context, MainActivity::class.java)
+        val intent = Intent(context, MainActivity::class.java).apply {
+            TrackingSessionStore.load(context)?.let { data = Uri.parse(it) }
+        }
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)

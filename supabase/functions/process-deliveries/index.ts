@@ -121,7 +121,12 @@ async function googleAccessToken(): Promise<string> {
 async function decryptToken(serialized: string): Promise<string> {
   const [ivValue, tagValue, ciphertextValue] = serialized.split(".");
   if (!ivValue || !tagValue || !ciphertextValue) throw new Error("TOKEN_CIPHERTEXT_INVALID");
-  const key = await crypto.subtle.importKey("raw", decodeBase64(required("DELIVERY_TOKEN_ENCRYPTION_KEY")), "AES-GCM", false, ["decrypt"]);
+  const configuredKey = required("DELIVERY_TOKEN_ENCRYPTION_KEY");
+  const decodedKey = decodeBase64(configuredKey);
+  const keyBytes = decodedKey.length === 32
+    ? decodedKey
+    : new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(configuredKey)));
+  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
   const tag = decodeBase64(tagValue);
   const ciphertext = decodeBase64(ciphertextValue);
   const combined = new Uint8Array(ciphertext.length + tag.length);

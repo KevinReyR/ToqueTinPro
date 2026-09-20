@@ -1,6 +1,7 @@
 package com.reinovalabs.toquetin.notifications
 
 import com.reinovalabs.toquetin.model.OrderSnapshot
+import com.reinovalabs.toquetin.data.TrackingSessionStore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.serialization.json.Json
@@ -10,6 +11,7 @@ class TrackingMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         if (message.data["revoked"] == "true") {
+            TrackingSessionStore.clear(this)
             TrackingNotifications.dismiss(this)
             return
         }
