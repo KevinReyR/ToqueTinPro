@@ -1,7 +1,7 @@
-package com.example.toquetin
+package com.reinovalabs.toquetin
 
 import android.app.Application
-import com.example.toquetin.notifications.TrackingNotifications
+import com.reinovalabs.toquetin.notifications.TrackingNotifications
 import java.net.CookieHandler
 import java.net.CookieManager
 import java.net.CookiePolicy

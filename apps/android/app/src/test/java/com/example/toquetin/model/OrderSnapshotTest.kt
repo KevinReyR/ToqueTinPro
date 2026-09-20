@@ -1,4 +1,4 @@
-package com.example.toquetin.model
+package com.reinovalabs.toquetin.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -1,4 +1,4 @@
-package com.example.toquetin.model
+package com.reinovalabs.toquetin.model
 
 import kotlinx.serialization.Serializable
 import java.time.Instant

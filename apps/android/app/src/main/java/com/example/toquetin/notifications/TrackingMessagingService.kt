@@ -1,6 +1,6 @@
-package com.example.toquetin.notifications
+package com.reinovalabs.toquetin.notifications
 
-import com.example.toquetin.model.OrderSnapshot
+import com.reinovalabs.toquetin.model.OrderSnapshot
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.serialization.json.Json

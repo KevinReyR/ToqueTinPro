@@ -1,4 +1,4 @@
-package com.example.toquetin
+package com.reinovalabs.toquetin
 
 import android.Manifest
 import android.content.Intent
@@ -21,10 +21,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.example.toquetin.data.TrackingClient
-import com.example.toquetin.data.TrackingLink
-import com.example.toquetin.model.OrderSnapshot
-import com.example.toquetin.notifications.TrackingNotifications
+import com.reinovalabs.toquetin.data.TrackingClient
+import com.reinovalabs.toquetin.data.TrackingLink
+import com.reinovalabs.toquetin.model.OrderSnapshot
+import com.reinovalabs.toquetin.notifications.TrackingNotifications
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
 import java.net.URI
@@ -53,7 +53,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun registerToken(link: TrackingLink) {
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token -> lifecycleScope.launch { runCatching { TrackingClient().registerFcmToken(link, token) } } }
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token: String ->
+            lifecycleScope.launch { runCatching { TrackingClient().registerFcmToken(link, token) } }
+        }
     }
 
 }

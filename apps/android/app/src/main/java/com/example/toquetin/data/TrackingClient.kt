@@ -1,7 +1,7 @@
-package com.example.toquetin.data
+package com.reinovalabs.toquetin.data
 
-import com.example.toquetin.BuildConfig
-import com.example.toquetin.model.OrderSnapshot
+import com.reinovalabs.toquetin.BuildConfig
+import com.reinovalabs.toquetin.model.OrderSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -28,19 +28,33 @@ class TrackingClient(private val baseUrl: String = BuildConfig.TRACKING_BASE_URL
 
     suspend fun open(link: TrackingLink): OrderSnapshot = withContext(Dispatchers.IO) {
         val body = buildJsonObject { put("nonce", link.nonce.toString()); put("token", link.token) }.toString()
-        request("/api/tracking/exchange", "POST", body).use { response -> if (response.responseCode !in 200..299) error("TRACKING_INVALID") }
-        request("/api/tracking/${link.nonce}", "GET").use { response ->
-            if (response.responseCode !in 200..299) error("TRACKING_INVALID")
-            json.decodeFromString<OrderSnapshot>(response.inputStream.bufferedReader().readText())
+        val exchangeResponse = request("/api/tracking/exchange", "POST", body)
+        try {
+            if (exchangeResponse.responseCode !in 200..299) error("TRACKING_INVALID")
+        } finally {
+            exchangeResponse.disconnect()
+        }
+
+        val snapshotResponse = request("/api/tracking/${link.nonce}", "GET")
+        try {
+            if (snapshotResponse.responseCode !in 200..299) error("TRACKING_INVALID")
+            json.decodeFromString<OrderSnapshot>(snapshotResponse.inputStream.bufferedReader().use { it.readText() })
+        } finally {
+            snapshotResponse.disconnect()
         }
     }
 
-    suspend fun registerFcmToken(link: TrackingLink, token: String) = withContext(Dispatchers.IO) {
+    suspend fun registerFcmToken(link: TrackingLink, token: String): Unit = withContext(Dispatchers.IO) {
         val payload = buildJsonObject {
             put("nonce", link.nonce.toString()); put("channel", "FCM_LIVE_UPDATE"); put("token", token)
             put("capabilities", buildJsonObject { put("liveUpdate", true) })
         }.toString()
-        request("/api/delivery-channels", "POST", payload).use { response -> if (response.responseCode !in 200..299) error("DELIVERY_REGISTRATION_FAILED") }
+        val response = request("/api/delivery-channels", "POST", payload)
+        try {
+            if (response.responseCode !in 200..299) error("DELIVERY_REGISTRATION_FAILED")
+        } finally {
+            response.disconnect()
+        }
     }
 
     private fun request(path: String, method: String, body: String? = null): HttpURLConnection =

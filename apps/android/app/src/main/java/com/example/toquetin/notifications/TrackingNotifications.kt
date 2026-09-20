@@ -1,4 +1,4 @@
-package com.example.toquetin.notifications
+package com.reinovalabs.toquetin.notifications
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -10,8 +10,8 @@ import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.example.toquetin.MainActivity
-import com.example.toquetin.model.OrderSnapshot
+import com.reinovalabs.toquetin.MainActivity
+import com.reinovalabs.toquetin.model.OrderSnapshot
 
 object TrackingNotifications {
     private const val CHANNEL_ID = "order_tracking"

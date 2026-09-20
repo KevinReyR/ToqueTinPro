@@ -9,6 +9,7 @@ test-results/
 *.tsbuildinfo
 DerivedData/
 .gradle/
+apps/android/**/build/
 local.properties
 apps/android/app/google-services.json
 apps/ios/ToqueTin.xcodeproj/

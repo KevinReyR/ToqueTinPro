@@ -7,17 +7,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.toquetin"
+    namespace = "com.reinovalabs.toquetin"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.toquetin"
+        applicationId = "com.reinovalabs.toquetin"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "TRACKING_BASE_URL", "\"https://track.example.com\"")
+        buildConfigField("String", "TRACKING_BASE_URL", "\"https://toquetinpro-web.onrender.com\"")
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
