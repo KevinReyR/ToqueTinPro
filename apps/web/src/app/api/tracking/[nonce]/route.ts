@@ -2,14 +2,14 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { publicTrackingSnapshotSchema } from "@/domain/order";
-import { verifyTrackingToken } from "@/lib/tracking-token";
+import { trackingNonceMatches, verifyTrackingToken } from "@/lib/tracking-token";
 
 export async function GET(_: Request, context: { params: Promise<{ nonce: string }> }) {
   const { nonce } = await context.params;
   const grant = (await cookies()).get("tt_tracking_grant")?.value;
   const secret = process.env.TRACKING_TOKEN_SECRET;
   const verified = grant && secret ? verifyTrackingToken(grant, secret) : null;
-  if (!verified || verified.nonce !== nonce) return invalidTracking();
+  if (!verified || !trackingNonceMatches(verified.nonce, nonce)) return invalidTracking();
 
   const client = createAdminClient();
   const { data, error } = await client.rpc("public_tracking_snapshot", { requested_nonce: nonce });

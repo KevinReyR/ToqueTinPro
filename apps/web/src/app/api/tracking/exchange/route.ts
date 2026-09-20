@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/server";
-import { verifyTrackingToken } from "@/lib/tracking-token";
+import { trackingNonceMatches, verifyTrackingToken } from "@/lib/tracking-token";
 
 const inputSchema = z.object({ nonce: z.uuid(), token: z.string().min(32).max(512) });
 
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const secret = process.env.TRACKING_TOKEN_SECRET;
   if (!parsed.success || !secret) return invalidTracking();
   const verified = verifyTrackingToken(parsed.data.token, secret);
-  if (!verified || verified.nonce !== parsed.data.nonce) return invalidTracking();
+  if (!verified || !trackingNonceMatches(verified.nonce, parsed.data.nonce)) return invalidTracking();
 
   const client = createAdminClient();
   const { data, error } = await client

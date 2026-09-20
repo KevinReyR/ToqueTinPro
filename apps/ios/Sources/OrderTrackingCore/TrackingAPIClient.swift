@@ -32,7 +32,7 @@ public struct TrackingAPIClient: Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(ExchangeBody(nonce: link.nonce, token: link.token))
+        request.httpBody = try JSONEncoder().encode(ExchangeBody(nonce: link.nonce.uuidString.lowercased(), token: link.token))
         let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw TrackingAPIError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else { throw TrackingAPIError.rejected }
@@ -53,7 +53,7 @@ public struct TrackingAPIClient: Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(ChannelBody(nonce: nonce, channel: "APNS_LIVE_ACTIVITY", token: value, capabilities: ["liveActivity": true]))
+        request.httpBody = try JSONEncoder().encode(ChannelBody(nonce: nonce.uuidString.lowercased(), channel: "APNS_LIVE_ACTIVITY", token: value, capabilities: ["liveActivity": true]))
         let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw TrackingAPIError.rejected
@@ -62,12 +62,12 @@ public struct TrackingAPIClient: Sendable {
 }
 
 private struct ExchangeBody: Encodable {
-    let nonce: UUID
+    let nonce: String
     let token: String
 }
 
 private struct ChannelBody: Encodable {
-    let nonce: UUID
+    let nonce: String
     let channel: String
     let token: String
     let capabilities: [String: Bool]

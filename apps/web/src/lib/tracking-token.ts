@@ -26,3 +26,7 @@ export function verifyTrackingToken(
   if (!timingSafeEqual(receivedBuffer, expectedBuffer)) return null;
   return { nonce };
 }
+
+export function trackingNonceMatches(trustedNonce: string, candidateNonce: string): boolean {
+  return trustedNonce.toLowerCase() === candidateNonce.toLowerCase();
+}

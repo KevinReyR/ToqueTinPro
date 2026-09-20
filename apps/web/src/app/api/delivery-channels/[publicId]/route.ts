@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { encryptDeliveryToken, tokenDigest } from "@/lib/delivery-token";
 import { createAdminClient } from "@/lib/supabase/server";
-import { verifyTrackingToken } from "@/lib/tracking-token";
+import { trackingNonceMatches, verifyTrackingToken } from "@/lib/tracking-token";
 
 const refreshSchema = z.object({ nonce: z.uuid(), token: z.string().min(16).max(8192) });
 const disableSchema = z.object({ nonce: z.uuid() });
@@ -41,7 +41,7 @@ async function authorize(nonce: string): Promise<{ id: number; expires_at: strin
   const grant = (await cookies()).get("tt_tracking_grant")?.value;
   const secret = process.env.TRACKING_TOKEN_SECRET;
   const verified = grant && secret ? verifyTrackingToken(grant, secret) : null;
-  if (!verified || verified.nonce !== nonce) return null;
+  if (!verified || !trackingNonceMatches(verified.nonce, nonce)) return null;
   const { data } = await createAdminClient().from("tracking_sessions").select("id, expires_at").eq("public_nonce", nonce).is("revoked_at", null).maybeSingle();
   return data;
 }

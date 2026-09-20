@@ -4,7 +4,7 @@ import { z } from "zod";
 import { deliveryChannelSchema } from "@/domain/order";
 import { createAdminClient } from "@/lib/supabase/server";
 import { encryptDeliveryToken, tokenDigest } from "@/lib/delivery-token";
-import { verifyTrackingToken } from "@/lib/tracking-token";
+import { trackingNonceMatches, verifyTrackingToken } from "@/lib/tracking-token";
 
 const registrationSchema = z.object({
   nonce: z.uuid(),
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const grant = (await cookies()).get("tt_tracking_grant")?.value;
   if (!parsed.success || !secret || !encryptionKey || !grant) return unauthorized();
   const verified = verifyTrackingToken(grant, secret);
-  if (!verified || verified.nonce !== parsed.data.nonce) return unauthorized();
+  if (!verified || !trackingNonceMatches(verified.nonce, parsed.data.nonce)) return unauthorized();
 
   const client = createAdminClient();
   const { data: session } = await client
