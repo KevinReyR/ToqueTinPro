@@ -10,7 +10,11 @@ type DeliveryAttempt = {
 };
 
 export async function processPendingDeliveries(): Promise<void> {
-  if (!fcmConfigured()) return;
+  const missingConfiguration = missingFcmConfiguration();
+  if (missingConfiguration.length > 0) {
+    console.error("FCM delivery skipped: missing configuration", missingConfiguration);
+    return;
+  }
   const client = createAdminClient();
   const { data, error } = await client.rpc("claim_delivery_attempts", { requested_limit: 25 });
   if (error) throw new Error("DELIVERY_CLAIM_FAILED");
@@ -24,6 +28,11 @@ export async function processPendingDeliveries(): Promise<void> {
       await completeAttempt(attempt.attempt_id, true, Math.round(performance.now() - startedAt));
     } catch (deliveryError) {
       const code = deliveryError instanceof Error ? deliveryError.message.slice(0, 120) : "UNKNOWN";
+      console.error("Delivery attempt failed", {
+        attemptId: attempt.attempt_id,
+        channel: attempt.channel,
+        code,
+      });
       await completeAttempt(attempt.attempt_id, false, Math.round(performance.now() - startedAt), code);
     }
   }
@@ -108,9 +117,9 @@ function encodeJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
-function fcmConfigured(): boolean {
+function missingFcmConfiguration(): string[] {
   return ["FCM_PROJECT_ID", "FCM_CLIENT_EMAIL", "FCM_PRIVATE_KEY", "DELIVERY_TOKEN_ENCRYPTION_KEY"]
-    .every((name) => Boolean(process.env[name]));
+    .filter((name) => !process.env[name]);
 }
 
 function required(name: string): string {
