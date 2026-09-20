@@ -22,16 +22,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.reinovalabs.toquetin.data.TrackingClient
 import com.reinovalabs.toquetin.data.TrackingLink
 import com.reinovalabs.toquetin.model.OrderSnapshot
 import com.reinovalabs.toquetin.notifications.TrackingNotifications
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.net.URI
 
 class MainActivity : ComponentActivity() {
     private val trackingClient = TrackingClient()
+    private var pollingJob: Job? = null
     private var snapshot by mutableStateOf<OrderSnapshot?>(null)
     private var error by mutableStateOf<String?>(null)
     private var trackingLink: TrackingLink? = null
@@ -49,7 +55,13 @@ class MainActivity : ComponentActivity() {
         trackingLink = link
         lifecycleScope.launch {
             runCatching { trackingClient.open(link) }
-                .onSuccess { snapshot = it; error = null; registerToken(link); TrackingNotifications.show(this@MainActivity, it) }
+                .onSuccess {
+                    snapshot = it
+                    error = null
+                    registerToken(link)
+                    TrackingNotifications.show(this@MainActivity, it)
+                    startPolling(link)
+                }
                 .onFailure {
                     Log.e("ToqueTinTracking", "Tracking failed: ${it.message}", it)
                     error = "No pudimos abrir este seguimiento. Solicita el QR nuevamente."
@@ -60,6 +72,26 @@ class MainActivity : ComponentActivity() {
     private fun registerToken(link: TrackingLink) {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token: String ->
             lifecycleScope.launch { runCatching { trackingClient.registerFcmToken(link, token) } }
+        }
+    }
+
+    private fun startPolling(link: TrackingLink) {
+        pollingJob?.cancel()
+        pollingJob = lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (isActive) {
+                    delay(4_000)
+                    runCatching { trackingClient.refresh(link) }
+                        .onSuccess {
+                            if (it.version != snapshot?.version) {
+                                snapshot = it
+                                error = null
+                                TrackingNotifications.show(this@MainActivity, it)
+                            }
+                        }
+                        .onFailure { Log.w("ToqueTinTracking", "Refresh failed: ${it.message}") }
+                }
+            }
         }
     }
 

@@ -39,10 +39,19 @@ class TrackingClient(private val baseUrl: String = BuildConfig.TRACKING_BASE_URL
             exchangeResponse.disconnect()
         }
 
+        fetchSnapshot(link)
+    }
+
+    suspend fun refresh(link: TrackingLink): OrderSnapshot = withContext(Dispatchers.IO) {
+        if (trackingCookie == null) error("TRACKING_SESSION_MISSING")
+        fetchSnapshot(link)
+    }
+
+    private fun fetchSnapshot(link: TrackingLink): OrderSnapshot {
         val snapshotResponse = request("/api/tracking/${link.nonce}", "GET")
         try {
             if (snapshotResponse.responseCode !in 200..299) error("TRACKING_INVALID")
-            json.decodeFromString<OrderSnapshot>(snapshotResponse.inputStream.bufferedReader().use { it.readText() })
+            return json.decodeFromString<OrderSnapshot>(snapshotResponse.inputStream.bufferedReader().use { it.readText() })
         } finally {
             snapshotResponse.disconnect()
         }

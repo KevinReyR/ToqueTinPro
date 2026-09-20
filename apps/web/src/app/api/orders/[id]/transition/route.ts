@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { orderStatusSchema } from "@/domain/order";
 import { createUserClient } from "@/lib/supabase/user-server";
+import { processPendingDeliveries } from "@/lib/delivery-dispatcher";
 
 const inputSchema = z.object({
   expectedStatus: orderStatusSchema,
@@ -34,5 +35,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     })
     : await client.rpc("transition_order", { requested_order_id: orderId, expected_status: parsed.data.expectedStatus, target_status: parsed.data.targetStatus });
   if (error) return NextResponse.json({ code: error.message.includes("CONFLICT") ? "CONFLICT" : "INVALID_TRANSITION" }, { status: 409 });
+  await processPendingDeliveries().catch((deliveryError: unknown) => {
+    console.error("Delivery dispatch failed", deliveryError instanceof Error ? deliveryError.message : "UNKNOWN");
+  });
   return NextResponse.json(data);
 }

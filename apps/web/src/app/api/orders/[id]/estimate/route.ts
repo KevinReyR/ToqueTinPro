@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createUserClient } from "@/lib/supabase/user-server";
+import { processPendingDeliveries } from "@/lib/delivery-dispatcher";
 
 const inputSchema = z.object({ expectedVersion: z.number().int().positive(), estimatedReadyAt: z.iso.datetime() });
 
@@ -18,5 +19,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     requested_estimated_ready_at: parsed.data.estimatedReadyAt,
   });
   if (error) return NextResponse.json({ code: error.message.includes("CONFLICT") ? "CONFLICT" : "ESTIMATE_UPDATE_FAILED" }, { status: 409 });
+  await processPendingDeliveries().catch((deliveryError: unknown) => {
+    console.error("Delivery dispatch failed", deliveryError instanceof Error ? deliveryError.message : "UNKNOWN");
+  });
   return NextResponse.json(data);
 }
