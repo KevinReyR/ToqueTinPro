@@ -72,7 +72,7 @@ async function googleAccessToken(): Promise<string> {
     exp: now + 3600,
   });
   const unsigned = `${header}.${payload}`;
-  const privateKey = createPrivateKey(required("FCM_PRIVATE_KEY").replaceAll("\\n", "\n"));
+  const privateKey = createPrivateKey(normalizeFcmPrivateKey(required("FCM_PRIVATE_KEY")));
   const signature = sign("RSA-SHA256", Buffer.from(unsigned), privateKey).toString("base64url");
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -115,6 +115,34 @@ function decryptToken(serialized: string, base64Key: string): string {
 
 function encodeJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function normalizeFcmPrivateKey(rawValue: string): string {
+  const trimmed = rawValue.trim();
+  let candidate = trimmed;
+
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (typeof parsed === "string") candidate = parsed;
+    if (isServiceAccount(parsed)) candidate = parsed.private_key;
+  } catch {
+    if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+      candidate = trimmed.slice(1, -1);
+    }
+  }
+
+  const normalized = candidate.replaceAll("\\n", "\n").trim();
+  if (!normalized.startsWith("-----BEGIN PRIVATE KEY-----") || !normalized.endsWith("-----END PRIVATE KEY-----")) {
+    throw new Error("FCM_PRIVATE_KEY_INVALID");
+  }
+  return normalized;
+}
+
+function isServiceAccount(value: unknown): value is { private_key: string } {
+  return typeof value === "object"
+    && value !== null
+    && "private_key" in value
+    && typeof value.private_key === "string";
 }
 
 function missingFcmConfiguration(): string[] {
