@@ -124,6 +124,12 @@ h1 { max-width: 13ch; margin-bottom: 1.5rem; font-size: clamp(3rem, 7vw, 6.8rem)
 .login-form input, .login-form select, .login-form textarea, .topbar select { width: 100%; padding: .8rem .9rem; border: 1px solid var(--line); border-radius: .7rem; color: var(--ink); background: var(--surface-strong); }
 .login-form input:focus, .login-form select:focus, .login-form textarea:focus { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); border-color: var(--accent); }
 .form-error { padding: .8rem 1rem; border-radius: .7rem; color: #7a2e1d; background: #f8ddd3; }
+.form-success { padding: .8rem 1rem; border-radius: .7rem; color: #245d42; background: var(--ready-soft); }
+.login-options { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.login-form .remember-option { display: inline-flex; grid-template-columns: none; flex-direction: row; align-items: center; gap: .55rem; color: var(--ink); cursor: pointer; }
+.login-form .remember-option input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--accent); }
+.text-button { padding: .25rem 0; border: 0; color: var(--accent-dark); background: transparent; font: inherit; font-size: .84rem; font-weight: 650; text-decoration: underline; text-underline-offset: .2rem; cursor: pointer; }
+.text-button:disabled { cursor: wait; opacity: .6; }
 .operator-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 1.5rem; align-items: start; }
 .operator-title { margin-bottom: 2rem; font-size: clamp(2.8rem, 5vw, 5rem); }
 .operator-board { display: grid; grid-template-columns: repeat(3, minmax(14rem, 1fr)); gap: .75rem; }
@@ -148,6 +154,7 @@ h1 { max-width: 13ch; margin-bottom: 1.5rem; font-size: clamp(3rem, 7vw, 6.8rem)
   .operator-layout { grid-template-columns: 1fr; }
   .operator-board { grid-template-columns: 1fr; }
   .create-panel { position: static; }
+  .login-options { align-items: flex-start; flex-direction: column; }
   .board-column { min-height: auto; }
   .legal { gap: 1rem; flex-direction: column; }
 }
