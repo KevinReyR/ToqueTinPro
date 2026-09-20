@@ -24,7 +24,13 @@ export async function processPendingDeliveries(): Promise<void> {
     try {
       if (attempt.channel !== "FCM_LIVE_UPDATE") throw new Error("CHANNEL_NOT_CONFIGURED");
       const token = decryptToken(attempt.token_ciphertext, required("DELIVERY_TOKEN_ENCRYPTION_KEY"));
-      await sendFcm(token, attempt);
+      const hydratedAttempt = await hydrateAttemptPayload(client, attempt);
+      await sendFcm(token, hydratedAttempt);
+      console.info("Delivery attempt succeeded", {
+        attemptId: attempt.attempt_id,
+        channel: attempt.channel,
+        eventKind: attempt.event_kind,
+      });
       await completeAttempt(attempt.attempt_id, true, Math.round(performance.now() - startedAt));
     } catch (deliveryError) {
       const code = deliveryError instanceof Error ? deliveryError.message.slice(0, 120) : "UNKNOWN";
@@ -36,6 +42,19 @@ export async function processPendingDeliveries(): Promise<void> {
       await completeAttempt(attempt.attempt_id, false, Math.round(performance.now() - startedAt), code);
     }
   }
+}
+
+async function hydrateAttemptPayload(
+  client: ReturnType<typeof createAdminClient>,
+  attempt: DeliveryAttempt,
+): Promise<DeliveryAttempt> {
+  const publicNonce = attempt.payload.publicNonce;
+  if (typeof publicNonce !== "string") throw new Error("DELIVERY_NONCE_MISSING");
+  const { data, error } = await client.rpc("public_tracking_snapshot", { requested_nonce: publicNonce });
+  if (error || typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new Error("DELIVERY_SNAPSHOT_FAILED");
+  }
+  return { ...attempt, payload: data as Record<string, unknown> };
 }
 
 async function sendFcm(token: string, attempt: DeliveryAttempt): Promise<void> {
