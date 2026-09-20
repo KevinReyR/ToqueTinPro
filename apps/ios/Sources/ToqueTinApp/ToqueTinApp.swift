@@ -4,12 +4,13 @@ import TrackingUI
 @main
 struct ToqueTinApp: App {
     @StateObject private var model = TrackingModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if let snapshot = model.snapshot {
-                    TrackingScreen(snapshot: snapshot)
+                    TrackingScreen(snapshot: snapshot, isConnected: model.isConnected)
                 } else if let error = model.errorMessage {
                     TrackingErrorView(message: error)
                 } else {
@@ -21,6 +22,10 @@ struct ToqueTinApp: App {
                 Task { await model.open(url) }
             }
             .onOpenURL { url in Task { await model.open(url) } }
+            .onChange(of: scenePhase) { phase in
+                guard phase == .active else { return }
+                Task { await model.refresh() }
+            }
         }
     }
 }

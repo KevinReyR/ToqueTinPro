@@ -3,8 +3,12 @@ import SwiftUI
 
 public struct TrackingScreen: View {
     public let snapshot: OrderSnapshot
+    public let isConnected: Bool
 
-    public init(snapshot: OrderSnapshot) { self.snapshot = snapshot }
+    public init(snapshot: OrderSnapshot, isConnected: Bool = true) {
+        self.snapshot = snapshot
+        self.isConnected = isConnected
+    }
 
     public var body: some View {
         ZStack {
@@ -69,9 +73,9 @@ public struct TrackingScreen: View {
 
             HStack(spacing: 6) {
                 Circle()
-                    .fill(snapshot.status == .cancelled ? Color.red : Color.green)
+                    .fill(connectionColor)
                     .frame(width: 7, height: 7)
-                Text("EN VIVO")
+                Text(isConnected ? "EN VIVO" : "RECONECTANDO")
                     .font(.caption2.weight(.bold))
                     .tracking(0.7)
             }
@@ -239,6 +243,11 @@ public struct TrackingScreen: View {
         case .delivered: "hand.thumbsup.fill"
         case .cancelled: "xmark.octagon.fill"
         }
+    }
+
+    private var connectionColor: Color {
+        if !isConnected { return .orange }
+        return snapshot.status == .cancelled ? .red : .green
     }
 
     private var progressSteps: [(title: String, subtitle: String)] {
