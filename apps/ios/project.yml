@@ -1,16 +1,16 @@
 name: ToqueTin
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.toquetin
   deploymentTarget:
-    iOS: "16.1"
+    iOS: "16.2"
 settings:
   base:
-    SWIFT_VERSION: "6.0"
-    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_VERSION: "5.10"
+    SWIFT_STRICT_CONCURRENCY: minimal
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: ""
-    TRACKING_BASE_URL: "https://track.example.com"
+    DEVELOPMENT_TEAM: 47LCR3FMKT
+    TRACKING_BASE_URL: "https://toquetinpro-web.onrender.com"
 targets:
   OrderTrackingCore:
     type: framework
@@ -18,7 +18,8 @@ targets:
     sources: [Sources/OrderTrackingCore]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.OrderTrackingCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.toquetin.app.OrderTrackingCore
+        GENERATE_INFOPLIST_FILE: YES
   TrackingUI:
     type: framework
     platform: iOS
@@ -27,7 +28,8 @@ targets:
       - target: OrderTrackingCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.TrackingUI
+        PRODUCT_BUNDLE_IDENTIFIER: com.toquetin.app.TrackingUI
+        GENERATE_INFOPLIST_FILE: YES
   ToqueTin:
     type: application
     platform: iOS
@@ -39,9 +41,12 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin
+        PRODUCT_BUNDLE_IDENTIFIER: com.toquetin.app
         INFOPLIST_FILE: Config/App-Info.plist
         CODE_SIGN_ENTITLEMENTS: Config/ToqueTin.entitlements
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Config/ToqueTin-Debug.entitlements
   ToqueTinClip:
     type: application.on-demand-install-capable
     platform: iOS
@@ -53,7 +58,7 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.Clip
+        PRODUCT_BUNDLE_IDENTIFIER: com.toquetin.app.clip
         INFOPLIST_FILE: Config/Clip-Info.plist
         CODE_SIGN_ENTITLEMENTS: Config/ToqueTinClip.entitlements
   OrderLiveActivity:
@@ -64,7 +69,7 @@ targets:
       - target: OrderTrackingCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.LiveActivity
+        PRODUCT_BUNDLE_IDENTIFIER: com.toquetin.app.liveactivity
         INFOPLIST_FILE: Config/Widget-Info.plist
         CODE_SIGN_ENTITLEMENTS: Config/OrderLiveActivity.entitlements
   OrderClipLiveActivity:
@@ -75,7 +80,7 @@ targets:
       - target: OrderTrackingCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ToqueTin.Clip.LiveActivity
+        PRODUCT_BUNDLE_IDENTIFIER: com.toquetin.app.clip.liveactivity
         INFOPLIST_FILE: Config/Widget-Info.plist
         CODE_SIGN_ENTITLEMENTS: Config/OrderClipLiveActivity.entitlements
   OrderTrackingCoreTests:
