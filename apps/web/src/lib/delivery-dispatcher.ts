@@ -71,13 +71,19 @@ async function sendFcm(token: string, attempt: DeliveryAttempt): Promise<void> {
           revoked: String(attempt.event_kind === "TRACKING_REVOKED"),
         },
         android: {
-          priority: attempt.event_kind === "ORDER_READY" ? "HIGH" : "NORMAL",
+          priority: fcmPriority(attempt.event_kind),
           ttl: "3600s",
         },
       },
     }),
   });
   if (!response.ok) throw new Error(`FCM_${response.status}`);
+}
+
+function fcmPriority(eventKind: string): "HIGH" | "NORMAL" {
+  return ["TRACKING_STARTED", "STATUS_CHANGED", "ORDER_READY", "ORDER_CLOSED"].includes(eventKind)
+    ? "HIGH"
+    : "NORMAL";
 }
 
 async function googleAccessToken(): Promise<string> {

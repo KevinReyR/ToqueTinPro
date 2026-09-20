@@ -16,30 +16,47 @@ import com.reinovalabs.toquetin.data.TrackingSessionStore
 import com.reinovalabs.toquetin.model.OrderSnapshot
 
 object TrackingNotifications {
-    private const val CHANNEL_ID = "order_tracking"
     private const val NOTIFICATION_ID = 143
 
     fun createChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Seguimiento de pedidos", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "Estado y tiempo restante de tu pedido"
-        })
+        manager.createNotificationChannels(listOf(
+            NotificationChannel(
+                NotificationPolicy.GENERAL_CHANNEL_ID,
+                "Actualizaciones del pedido",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = "Alertas de cambios de estado del pedido"
+                enableVibration(true)
+                vibrationPattern = NotificationPolicy.GENERAL_VIBRATION_PATTERN
+            },
+            NotificationChannel(
+                NotificationPolicy.READY_CHANNEL_ID,
+                "Pedido listo para recoger",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = "Alerta destacada cuando el pedido está listo"
+                enableVibration(true)
+                vibrationPattern = NotificationPolicy.READY_VIBRATION_PATTERN
+            },
+        ))
     }
 
-    fun show(context: Context, snapshot: OrderSnapshot) {
+    fun show(context: Context, snapshot: OrderSnapshot, alert: Boolean = false) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         val intent = Intent(context, MainActivity::class.java).apply {
             TrackingSessionStore.load(context)?.let { data = Uri.parse(it) }
         }
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, NotificationPolicy.channelId(snapshot.status))
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("Pedido ${snapshot.orderNumber} · ${snapshot.statusLabel()}")
             .setContentText(snapshot.etaLabel())
             .setStyle(NotificationCompat.BigTextStyle().bigText("${snapshot.restaurantName} · ${snapshot.statusLabel()} · ${snapshot.etaLabel()}"))
             .setContentIntent(pendingIntent)
-            .setPriority(if (snapshot.status.name == "READY") NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
-            .setOnlyAlertOnce(snapshot.status.name != "READY")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOnlyAlertOnce(!alert)
+            .setSilent(!alert)
             .setOngoing(snapshot.status.name !in setOf("DELIVERED", "CANCELLED"))
             .setRequestPromotedOngoing(true)
             .setShortCriticalText(snapshot.etaLabel().take(7))

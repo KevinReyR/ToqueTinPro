@@ -212,6 +212,8 @@ El mismo QR deberá abrir la mejor superficie disponible: App Clip en iOS, app i
 - Cuando cambie estado o estimación, el backend deberá publicar una actualización idempotente para las superficies nativas registradas después de confirmar la transacción del pedido.
 - Mientras el pedido esté `Recibido` o `Preparando`, la superficie deberá mostrar una cuenta regresiva aproximada; si la estimación vence, deberá mostrar «Casi listo» y nunca un tiempo negativo.
 - Cuando el pedido pase a `Listo`, la superficie deberá reemplazar la estimación por una indicación inequívoca de retiro y usar una alerta perceptible permitida por la plataforma.
+- Cuando la app Android reciba una transición de estado mediante FCM, deberá usar una alerta de prioridad alta; las actualizaciones exclusivas de estimación y las reconciliaciones por polling deberán permanecer silenciosas.
+- Cuando el pedido pase a `Listo` en Android, la alerta deberá distinguirse con tres vibraciones de 700 ms separadas por pausas de 250 ms, salvo que la configuración del dispositivo limite la vibración.
 - Cuando el pedido pase a `Entregado` o `Cancelado`, la actividad deberá terminar y podrá conservar el resultado final hasta 15 minutos; una revocación deberá retirarla inmediatamente.
 - Si la capacidad nativa está deshabilitada, falla, no existe o el cliente rechaza permisos, el seguimiento web deberá permanecer completo y utilizable.
 - El producto no deberá incluir PII, tokens, IDs internos ni instrucciones sensibles en Lock Screen, Dynamic Island o notificaciones.

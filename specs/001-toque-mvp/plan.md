@@ -49,6 +49,7 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 - **Operación del restaurante:** selección del restaurante activo, dashboard diario, creación de pedidos, presentación del QR, actualización de estimación y acciones de estado. `[RF-1, RF-2, RF-4, RF-5, RF-9, RF-11, RF-13]`
 - **Seguimiento público:** intercambio inicial del token, vista sin registro visible, snapshot público, suscripción en tiempo real, reintento manual y activación opcional de avisos. `[RF-2, RF-3, RF-6–RF-8, RF-10, RF-12, RF-13]`
 - **Procesamiento asíncrono:** despacho y reintento de Web Push, ActivityKit/APNs y FCM a partir de una bandeja de salida persistente. `[RF-7, RF-8, RF-14]`
+- **Alertas Android:** las transiciones de estado se enviarán por FCM con prioridad alta y usarán canales de alta importancia separados para alertas generales y `READY`; polling y cambios exclusivos de estimación actualizarán silenciosamente. `[RF-7, RF-8, RF-14]`
 
 ## 3. Tipos y reglas de dominio
 

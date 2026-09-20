@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
                     snapshot = it
                     error = null
                     registerToken(link)
-                    TrackingNotifications.show(this@MainActivity, it)
+                    TrackingNotifications.show(this@MainActivity, it, alert = true)
                     startPolling(link)
                 }
                 .onFailure {

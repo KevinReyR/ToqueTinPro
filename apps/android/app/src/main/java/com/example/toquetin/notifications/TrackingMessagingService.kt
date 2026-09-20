@@ -16,7 +16,8 @@ class TrackingMessagingService : FirebaseMessagingService() {
             return
         }
         val snapshotJson = message.data["snapshot"] ?: return
+        val alert = NotificationPolicy.shouldAlert(message.data["eventKind"])
         runCatching { json.decodeFromString<OrderSnapshot>(snapshotJson) }
-            .onSuccess { TrackingNotifications.show(this, it) }
+            .onSuccess { TrackingNotifications.show(this, it, alert) }
     }
 }
