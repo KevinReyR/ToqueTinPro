@@ -39,7 +39,13 @@ export async function POST(request: Request) {
     requested_capabilities: parsed.data.capabilities,
     requested_expires_at: session.expires_at,
   });
-  if (error) return NextResponse.json({ code: "DELIVERY_REGISTRATION_FAILED" }, { status: 500 });
+  if (error) {
+    console.error("Delivery channel registration failed", {
+      code: error.code,
+      message: error.message,
+    });
+    return NextResponse.json({ code: "DELIVERY_REGISTRATION_FAILED" }, { status: 500 });
+  }
   return NextResponse.json(Array.isArray(data) ? data[0] : data, { status: 201 });
 }
 
