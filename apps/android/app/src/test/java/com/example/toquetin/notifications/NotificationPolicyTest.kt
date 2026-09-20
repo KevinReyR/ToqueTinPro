@@ -9,10 +9,10 @@ import org.junit.Test
 
 class NotificationPolicyTest {
     @Test
-    fun `ready uses its dedicated channel and triple vibration`() {
+    fun `ready uses its dedicated channel and six long vibrations`() {
         assertEquals(NotificationPolicy.READY_CHANNEL_ID, NotificationPolicy.channelId(OrderStatus.READY))
         assertArrayEquals(
-            longArrayOf(0L, 700L, 250L, 700L, 250L, 700L),
+            longArrayOf(0L, 700L, 250L, 700L, 250L, 700L, 250L, 700L, 250L, 700L, 250L, 700L),
             NotificationPolicy.READY_VIBRATION_PATTERN,
         )
     }
