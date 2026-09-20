@@ -20,7 +20,7 @@ struct OrderLiveActivityWidget: Widget {
             .padding(.vertical, 4)
             .activityBackgroundTint(Color(red: 0.96, green: 0.93, blue: 0.88))
             .activitySystemActionForegroundColor(.primary)
-            .widgetURL(URL(string: "https://track.example.com/tracking/\(context.attributes.publicNonce.uuidString.lowercased())"))
+            .widgetURL(URL(string: "https://toquetinpro-web.onrender.com/tracking/\(context.attributes.publicNonce.uuidString.lowercased())"))
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) { Label("#\(context.attributes.orderNumber)", systemImage: "takeoutbag.and.cup.and.straw.fill").fontWeight(.semibold) }
@@ -33,7 +33,7 @@ struct OrderLiveActivityWidget: Widget {
             } minimal: {
                 Image(systemName: context.state.status == .ready ? "checkmark" : "takeoutbag.and.cup.and.straw.fill")
             }
-            .widgetURL(URL(string: "https://track.example.com/tracking/\(context.attributes.publicNonce.uuidString.lowercased())"))
+            .widgetURL(URL(string: "https://toquetinpro-web.onrender.com/tracking/\(context.attributes.publicNonce.uuidString.lowercased())"))
             .keylineTint(.orange)
         }
     }

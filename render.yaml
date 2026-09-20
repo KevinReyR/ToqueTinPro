@@ -15,3 +15,7 @@ services:
         generateValue: true
       - key: DELIVERY_TOKEN_ENCRYPTION_KEY
         generateValue: true
+      - key: APPLE_TEAM_ID
+        value: 47LCR3FMKT
+      - key: APPLE_APP_BUNDLE_ID
+        value: com.toquetin.app

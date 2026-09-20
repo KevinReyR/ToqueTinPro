@@ -143,6 +143,9 @@ h1 { max-width: 13ch; margin-bottom: 1.5rem; font-size: clamp(3rem, 7vw, 6.8rem)
 .skeleton-lines span:nth-child(1) { width: 45%; }
 .skeleton-lines span:nth-child(2) { width: 82%; }
 .skeleton-lines span:nth-child(3) { width: 65%; }
+.ios-open-actions { display: grid; gap: .75rem; margin-top: 1.5rem; }
+.ios-open-actions .button { width: 100%; }
+.ios-open-help { margin: .25rem 0 0; color: var(--muted); font-size: .82rem; text-align: center; }
 .not-found-eyebrow { margin-top: 2rem; }
 
 @media (max-width: 800px) {

@@ -4,7 +4,7 @@ import os
 
 @MainActor
 public final class LiveActivityManager {
-    private let logger = Logger(subsystem: "com.example.ToqueTin", category: "live-activity")
+    private let logger = Logger(subsystem: "com.toquetin.app", category: "live-activity")
 
     public init() {}
 
