@@ -9,7 +9,7 @@ self.addEventListener("push", (event) => {
       icon: "/icon.svg",
       badge: "/icon.svg",
       tag: `order-${snapshot.publicNonce ?? snapshot.orderNumber}`,
-      renotify: ready,
+      renotify: ["STATUS_CHANGED", "ORDER_READY", "ORDER_CLOSED"].includes(message.eventKind),
       data: { url: snapshot.publicNonce ? `/tracking/${snapshot.publicNonce}` : "/" },
     },
   ));

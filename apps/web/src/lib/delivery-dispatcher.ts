@@ -1,20 +1,17 @@
 import { createDecipheriv, createHash, createPrivateKey, sign } from "node:crypto";
+import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/server";
 
 type DeliveryAttempt = {
   attempt_id: number;
   channel: "WEB_PUSH" | "APNS_LIVE_ACTIVITY" | "FCM_LIVE_UPDATE";
   token_ciphertext: string;
+  capabilities: Record<string, unknown>;
   event_kind: string;
   payload: Record<string, unknown>;
 };
 
 export async function processPendingDeliveries(): Promise<void> {
-  const missingConfiguration = missingFcmConfiguration();
-  if (missingConfiguration.length > 0) {
-    console.error("FCM delivery skipped: missing configuration", missingConfiguration);
-    return;
-  }
   const client = createAdminClient();
   const { data, error } = await client.rpc("claim_delivery_attempts", { requested_limit: 25 });
   if (error) throw new Error("DELIVERY_CLAIM_FAILED");
@@ -22,10 +19,11 @@ export async function processPendingDeliveries(): Promise<void> {
   for (const attempt of (data ?? []) as DeliveryAttempt[]) {
     const startedAt = performance.now();
     try {
-      if (attempt.channel !== "FCM_LIVE_UPDATE") throw new Error("CHANNEL_NOT_CONFIGURED");
       const token = decryptToken(attempt.token_ciphertext, required("DELIVERY_TOKEN_ENCRYPTION_KEY"));
       const hydratedAttempt = await hydrateAttemptPayload(client, attempt);
-      await sendFcm(token, hydratedAttempt);
+      if (attempt.channel === "FCM_LIVE_UPDATE") await sendFcm(token, hydratedAttempt);
+      else if (attempt.channel === "WEB_PUSH") await sendWebPush(token, hydratedAttempt);
+      else throw new Error("CHANNEL_NOT_CONFIGURED");
       console.info("Delivery attempt succeeded", {
         attemptId: attempt.attempt_id,
         channel: attempt.channel,
@@ -54,7 +52,24 @@ async function hydrateAttemptPayload(
   if (error || typeof data !== "object" || data === null || Array.isArray(data)) {
     throw new Error("DELIVERY_SNAPSHOT_FAILED");
   }
-  return { ...attempt, payload: data as Record<string, unknown> };
+  return { ...attempt, payload: { ...attempt.payload, ...data as Record<string, unknown> } };
+}
+
+async function sendWebPush(endpoint: string, attempt: DeliveryAttempt): Promise<void> {
+  const p256dh = attempt.capabilities.p256dh;
+  const auth = attempt.capabilities.auth;
+  if (typeof p256dh !== "string" || !p256dh || typeof auth !== "string" || !auth) {
+    throw new Error("WEB_PUSH_KEYS_MISSING");
+  }
+  webpush.setVapidDetails(
+    "mailto:ops@toquetin.app",
+    required("VAPID_PUBLIC_KEY"),
+    required("VAPID_PRIVATE_KEY"),
+  );
+  await webpush.sendNotification(
+    { endpoint, keys: { p256dh, auth } },
+    JSON.stringify({ eventKind: attempt.event_kind, snapshot: attempt.payload }),
+  );
 }
 
 async function sendFcm(token: string, attempt: DeliveryAttempt): Promise<void> {
@@ -168,11 +183,6 @@ function isServiceAccount(value: unknown): value is { private_key: string } {
     && value !== null
     && "private_key" in value
     && typeof value.private_key === "string";
-}
-
-function missingFcmConfiguration(): string[] {
-  return ["FCM_PROJECT_ID", "FCM_CLIENT_EMAIL", "FCM_PRIVATE_KEY", "DELIVERY_TOKEN_ENCRYPTION_KEY"]
-    .filter((name) => !process.env[name]);
 }
 
 function required(name: string): string {
