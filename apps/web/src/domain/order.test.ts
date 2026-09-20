@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition } from "./order";
+import { canTransition, publicTrackingSnapshotSchema } from "./order";
 import { etaPresentation } from "./eta";
 
 describe("order transitions", () => {
@@ -37,5 +37,24 @@ describe("eta presentation", () => {
     expect(
       etaPresentation("READY", "2026-09-19T17:20:00.000Z", now).label,
     ).toBe("Listo para recoger");
+  });
+});
+
+describe("public tracking snapshot", () => {
+  it("accepts PostgreSQL timestamps with an explicit UTC offset", () => {
+    const timestamp = "2026-09-20T00:00:00+00:00";
+    expect(publicTrackingSnapshotSchema.safeParse({
+      restaurantName: "RestaurantePrueba",
+      orderNumber: "143",
+      status: "RECEIVED",
+      estimatedReadyAt: timestamp,
+      estimateUpdatedAt: timestamp,
+      pickupInstructions: "Recoger en el mostrador",
+      cancellationReason: null,
+      serverTime: timestamp,
+      version: 1,
+      activityExpiresAt: timestamp,
+      lastUpdatedAt: timestamp,
+    }).success).toBe(true);
   });
 });

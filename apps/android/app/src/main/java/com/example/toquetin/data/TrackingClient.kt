@@ -25,12 +25,16 @@ data class TrackingLink(val nonce: UUID, val token: String) {
 
 class TrackingClient(private val baseUrl: String = BuildConfig.TRACKING_BASE_URL) {
     private val json = Json { ignoreUnknownKeys = true }
+    private var trackingCookie: String? = null
 
     suspend fun open(link: TrackingLink): OrderSnapshot = withContext(Dispatchers.IO) {
         val body = buildJsonObject { put("nonce", link.nonce.toString()); put("token", link.token) }.toString()
         val exchangeResponse = request("/api/tracking/exchange", "POST", body)
         try {
             if (exchangeResponse.responseCode !in 200..299) error("TRACKING_INVALID")
+            trackingCookie = exchangeResponse.getHeaderField("Set-Cookie")
+                ?.substringBefore(';')
+                ?: error("TRACKING_SESSION_MISSING")
         } finally {
             exchangeResponse.disconnect()
         }
@@ -61,6 +65,7 @@ class TrackingClient(private val baseUrl: String = BuildConfig.TRACKING_BASE_URL
         (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method; connectTimeout = 10_000; readTimeout = 10_000
             setRequestProperty("Accept", "application/json")
+            trackingCookie?.let { setRequestProperty("Cookie", it) }
             if (body != null) { doOutput = true; setRequestProperty("Content-Type", "application/json"); outputStream.use { it.write(body.toByteArray()) } }
         }
 }

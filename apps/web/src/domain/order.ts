@@ -30,18 +30,20 @@ export const deliveryEventKinds = [
 export const deliveryEventKindSchema = z.enum(deliveryEventKinds);
 export type DeliveryEventKind = z.infer<typeof deliveryEventKindSchema>;
 
+const utcTimestampSchema = z.iso.datetime({ offset: true });
+
 export const publicTrackingSnapshotSchema = z.object({
   restaurantName: z.string().min(1),
   orderNumber: z.string().min(1),
   status: orderStatusSchema,
-  estimatedReadyAt: z.iso.datetime().nullable(),
-  estimateUpdatedAt: z.iso.datetime().nullable(),
+  estimatedReadyAt: utcTimestampSchema.nullable(),
+  estimateUpdatedAt: utcTimestampSchema.nullable(),
   pickupInstructions: z.string().nullable(),
   cancellationReason: z.string().nullable(),
-  serverTime: z.iso.datetime(),
+  serverTime: utcTimestampSchema,
   version: z.number().int().nonnegative(),
-  activityExpiresAt: z.iso.datetime().nullable(),
-  lastUpdatedAt: z.iso.datetime(),
+  activityExpiresAt: utcTimestampSchema.nullable(),
+  lastUpdatedAt: utcTimestampSchema,
 });
 
 export type PublicTrackingSnapshot = z.infer<

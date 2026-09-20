@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 import java.net.URI
 
 class MainActivity : ComponentActivity() {
+    private val trackingClient = TrackingClient()
     private var snapshot by mutableStateOf<OrderSnapshot?>(null)
     private var error by mutableStateOf<String?>(null)
     private var trackingLink: TrackingLink? = null
@@ -46,15 +48,18 @@ class MainActivity : ComponentActivity() {
         val link = intent.data?.toString()?.let { runCatching { URI(it) }.getOrNull() }?.let(TrackingLink::parse) ?: return
         trackingLink = link
         lifecycleScope.launch {
-            runCatching { TrackingClient().open(link) }
+            runCatching { trackingClient.open(link) }
                 .onSuccess { snapshot = it; error = null; registerToken(link); TrackingNotifications.show(this@MainActivity, it) }
-                .onFailure { error = "No pudimos abrir este seguimiento. Solicita el QR nuevamente." }
+                .onFailure {
+                    Log.e("ToqueTinTracking", "Tracking failed: ${it.message}", it)
+                    error = "No pudimos abrir este seguimiento. Solicita el QR nuevamente."
+                }
         }
     }
 
     private fun registerToken(link: TrackingLink) {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token: String ->
-            lifecycleScope.launch { runCatching { TrackingClient().registerFcmToken(link, token) } }
+            lifecycleScope.launch { runCatching { trackingClient.registerFcmToken(link, token) } }
         }
     }
 
