@@ -16,8 +16,13 @@ export async function POST(request: Request) {
   const encryptionKey = process.env.DELIVERY_TOKEN_ENCRYPTION_KEY;
   const controllerName = process.env.PRIVACY_CONTROLLER_NAME;
   const privacyEmail = process.env.PRIVACY_CONTACT_EMAIL;
+  const n8nWebhookUrl = process.env.N8N_WHATSAPP_DELIVERY_WEBHOOK_URL;
+  const n8nSecret = process.env.N8N_WEBHOOK_SECRET;
   if (!phoneNumber || !encryptionKey || !controllerName || !privacyEmail) {
     return NextResponse.json({ code: "PRIVACY_CONFIGURATION_REQUIRED" }, { status: 503 });
+  }
+  if (!n8nWebhookUrl || !n8nSecret) {
+    return NextResponse.json({ code: "WHATSAPP_CONFIGURATION_REQUIRED" }, { status: 503 });
   }
 
   const code = createWhatsAppCode();

@@ -181,7 +181,9 @@ export function NotificationChannelSelector({ nonce, preview = false }: { nonce:
       setWhatsAppStatus("AVAILABLE");
       setMessage(error instanceof Error && error.message === "PRIVACY_CONFIGURATION_REQUIRED"
         ? "WhatsApp estará disponible cuando terminemos la configuración de privacidad."
-        : "No pudimos abrir WhatsApp. Inténtalo de nuevo.");
+        : error instanceof Error && error.message === "WHATSAPP_CONFIGURATION_REQUIRED"
+          ? "WhatsApp estará disponible cuando terminemos su conexión segura."
+          : "No pudimos abrir WhatsApp. Inténtalo de nuevo.");
     }
   }
 
