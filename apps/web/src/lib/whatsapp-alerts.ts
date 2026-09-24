@@ -3,7 +3,7 @@ import { statusLabel, type OrderStatus } from "../domain/order";
 import {
   formatWhatsAppOrderLine,
   formatWhatsAppOrderMessage,
-} from "../../../../supabase/functions/_shared/whatsapp-message";
+} from "../../../../supabase/functions/process-deliveries/whatsapp-message";
 
 const CHALLENGE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;

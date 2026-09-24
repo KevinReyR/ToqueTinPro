@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
 import { importPKCS8, SignJWT } from "npm:jose@6.1.0";
 import webpush from "npm:web-push@3.6.7";
-import { formatWhatsAppOrderMessage } from "../_shared/whatsapp-message.ts";
+import { formatWhatsAppOrderMessage } from "./whatsapp-message.ts";
 
 type Attempt = {
   attempt_id: number;
