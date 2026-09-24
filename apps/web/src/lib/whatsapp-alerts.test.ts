@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   activationMessages,
+  consentDecisionMessage,
   createWhatsAppCode,
   createWhatsAppLaunchUrl,
   normalizeWhatsAppId,
+  optOutMessage,
   signIntegrationBody,
   statusMessage,
   verifyIntegrationSignature,
@@ -32,20 +34,7 @@ describe("WhatsApp activation", () => {
     expect(verifyIntegrationSignature(body, String(Math.floor((now - 6 * 60_000) / 1000)), signature, secret, now)).toBe(false);
   });
 
-  it("identifies ToqueTin, the restaurant, order and state", () => {
-    expect(statusMessage({ restaurantName: "RestaurantePrueba", orderNumber: "143", status: "READY" }))
-      .toBe("ToqueTin · RestaurantePrueba · Pedido 143: Listo para recoger. Ya puedes acercarte a recogerlo.");
-    expect(activationMessages({
-      contactContextId: "context",
-      restaurantName: "RestaurantePrueba",
-      orderNumber: "143",
-      status: "RECEIVED",
-      commercialConsentDecision: null,
-    })[0].text)
-      .toContain("Avisos activos para el Pedido 143 de RestaurantePrueba");
-  });
-
-  it("asks once for a combined commercial consent", () => {
+  it("formats activation and combined commercial consent exactly", () => {
     const messages = activationMessages({
       contactContextId: "context",
       restaurantName: "RestaurantePrueba",
@@ -54,12 +43,18 @@ describe("WhatsApp activation", () => {
       commercialConsentDecision: null,
     });
 
-    expect(messages).toHaveLength(2);
-    expect(messages[1]).toMatchObject({
-      kind: "CONSENT_PROMPT",
-      controller: "TOQUETIN",
-      text: expect.stringContaining("ToqueTin y sus restaurantes aliados"),
-    });
+    expect(messages).toEqual([
+      {
+        kind: "TEXT",
+        text: "✅ *Avisos activos*\n\n*Pedido 143 · RestaurantePrueba*\nEstado actual: *Recibido*",
+      },
+      {
+        kind: "CONSENT_PROMPT",
+        contextId: "context",
+        controller: "TOQUETIN",
+        text: "¿Aceptas recibir novedades comerciales de *ToqueTin y sus restaurantes aliados*?\n\nEsto no afecta los avisos de tu pedido.",
+      },
+    ]);
   });
 
   it.each(["GRANTED", "DECLINED", "REVOKED"] as const)(
@@ -77,4 +72,105 @@ describe("WhatsApp activation", () => {
       expect(messages[0].kind).toBe("TEXT");
     },
   );
+});
+
+describe("WhatsApp order messages", () => {
+  const basePayload = { restaurantName: "RestaurantePrueba", orderNumber: "143" };
+
+  it("formats RECEIVED", () => {
+    expect(statusMessage({ ...basePayload, status: "RECEIVED" })).toBe(
+      "✅ *Pedido recibido*\n\n*Pedido 143 · RestaurantePrueba*\nTu pedido ya está en seguimiento.",
+    );
+  });
+
+  it("formats PREPARING with a rounded-up future estimate", () => {
+    expect(statusMessage({
+      ...basePayload,
+      status: "PREPARING",
+      serverTime: "2026-09-24T15:00:00.000Z",
+      estimatedReadyAt: "2026-09-24T15:03:01.000Z",
+    })).toBe(
+      "👨‍🍳 *Ya estamos preparando tu pedido*\n\n*Pedido 143 · RestaurantePrueba*\nAproximadamente *~4 min*",
+    );
+  });
+
+  it("uses Casi listo for an expired estimate", () => {
+    expect(statusMessage({
+      ...basePayload,
+      status: "PREPARING",
+      serverTime: "2026-09-24T15:04:00.000Z",
+      estimatedReadyAt: "2026-09-24T15:03:00.000Z",
+    })).toBe(
+      "👨‍🍳 *Ya estamos preparando tu pedido*\n\n*Pedido 143 · RestaurantePrueba*\n*Casi listo*",
+    );
+  });
+
+  it.each([
+    {},
+    { serverTime: "invalid", estimatedReadyAt: "2026-09-24T15:03:00.000Z" },
+    { serverTime: "2026-09-24T15:00:00.000Z", estimatedReadyAt: "invalid" },
+  ])("omits an unavailable or invalid estimate", (estimate) => {
+    expect(statusMessage({ ...basePayload, status: "PREPARING", ...estimate })).toBe(
+      "👨‍🍳 *Ya estamos preparando tu pedido*\n\n*Pedido 143 · RestaurantePrueba*",
+    );
+  });
+
+  it("formats READY with the default pickup instruction", () => {
+    expect(statusMessage({ ...basePayload, status: "READY" })).toBe(
+      "🔔 *¡Tu pedido está listo!*\n\n*Pedido 143 · RestaurantePrueba*\nAcércate al mostrador para recogerlo.",
+    );
+  });
+
+  it("prefers and sanitizes the configured pickup instruction", () => {
+    expect(statusMessage({
+      ...basePayload,
+      restaurantName: "Restaurante *Prueba*_~`",
+      status: "READY",
+      pickupInstructions: "Busca el mostrador *azul*\n_y pregunta por Kevin_",
+    })).toBe(
+      "🔔 *¡Tu pedido está listo!*\n\n*Pedido 143 · Restaurante Prueba*\nBusca el mostrador azul y pregunta por Kevin",
+    );
+  });
+
+  it("formats DELIVERED", () => {
+    expect(statusMessage({ ...basePayload, status: "DELIVERED" })).toBe(
+      "✅ *Pedido entregado*\n\n*Pedido 143 · RestaurantePrueba*\n¡Gracias por elegirnos! Buen provecho.",
+    );
+  });
+
+  it("formats CANCELLED with a sanitized reason", () => {
+    expect(statusMessage({
+      ...basePayload,
+      status: "CANCELLED",
+      cancellationReason: "Producto *no* disponible\n~hoy~",
+    })).toBe(
+      "⚠️ *Pedido cancelado*\n\n*Pedido 143 · RestaurantePrueba*\nMotivo: Producto no disponible hoy\n\nSi necesitas ayuda, acércate al mostrador.",
+    );
+  });
+
+  it("omits an unavailable cancellation reason", () => {
+    expect(statusMessage({ ...basePayload, status: "CANCELLED" })).toBe(
+      "⚠️ *Pedido cancelado*\n\n*Pedido 143 · RestaurantePrueba*\nSi necesitas ayuda, acércate al mostrador.",
+    );
+  });
+});
+
+describe("WhatsApp consent responses", () => {
+  it("uses a warm response for every commercial consent decision", () => {
+    expect(consentDecisionMessage("GRANTED")).toBe(
+      "✅ *Preferencias guardadas*\n\nRecibirás novedades de ToqueTin y sus restaurantes aliados. Puedes cambiar esta elección cuando quieras.",
+    );
+    expect(consentDecisionMessage("DECLINED")).toBe(
+      "👍 *Entendido*\n\nSeguirás recibiendo únicamente los avisos de este pedido.",
+    );
+    expect(consentDecisionMessage("REVOKED")).toBe(
+      "✅ *Preferencia actualizada*\n\nDejaste de recibir novedades comerciales.",
+    );
+  });
+
+  it("confirms the total opt-out", () => {
+    expect(optOutMessage()).toBe(
+      "✅ *Avisos desactivados*\n\nNo recibirás más mensajes de ToqueTin en este número.",
+    );
+  });
 });

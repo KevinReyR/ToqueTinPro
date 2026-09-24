@@ -130,6 +130,10 @@ El seguimiento deberá ofrecer una acción explícita «Recibir avisos del pedid
 - Cuando el cliente pulse «Recibir avisos del pedido», el producto deberá abrir una hoja accesible titulada «¿Dónde quieres recibir avisos?» y deberá permitir activar más de un canal.
 - Cuando el cliente conceda un permiso aplicable, el producto deberá confirmar qué canal quedó activo para ese pedido y cambiar la acción principal a «Gestionar avisos».
 - Cuando un pedido con avisos activados cambie a `Preparando`, `Listo`, `Entregado` o `Cancelado`, el producto deberá intentar un aviso en cada canal activo; la activación inicial podrá confirmar el estado `Recibido` sin generar un evento duplicado.
+- Cuando WhatsApp comunique un estado operativo, el mensaje deberá identificar el restaurante y el pedido, usar una jerarquía breve mediante texto nativo, negritas, saltos de línea y como máximo un emoji principal, y priorizar inequívocamente el aviso `Listo`.
+- Cuando WhatsApp comunique `Preparando`, deberá mostrar el tiempo restante aproximado si la estimación es válida; si ya venció, deberá mostrar «Casi listo» y nunca un valor negativo.
+- Cuando WhatsApp comunique `Listo`, deberá usar las instrucciones de retiro configuradas por el restaurante o, si no existen, indicar que el cliente se acerque al mostrador.
+- Cuando WhatsApp comunique `Cancelado`, deberá mostrar el motivo público disponible y una indicación de ayuda en el mostrador.
 - Cuando solo cambie la estimación, el producto deberá actualizar las superficies compatibles sin producir una alerta perceptible ni enviar un mensaje de WhatsApp.
 - Si el cliente rechaza un permiso, el dispositivo no admite un canal o un aviso falla, el producto deberá explicarlo sin bloquear ni degradar el seguimiento principal.
 - Mientras el cliente no haya realizado la acción explícita, el producto no deberá solicitar permisos de notificación.

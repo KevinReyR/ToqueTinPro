@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
 import { importPKCS8, SignJWT } from "npm:jose@6.1.0";
 import webpush from "npm:web-push@3.6.7";
+import { formatWhatsAppOrderMessage } from "../_shared/whatsapp-message.ts";
 
 type Attempt = {
   attempt_id: number;
@@ -113,20 +114,14 @@ async function sendWhatsApp(recipient: string, attempt: Attempt) {
   if (attempt.event_kind === "ESTIMATE_CHANGED") return;
   const timestamp = String(Math.floor(Date.now() / 1000));
   const eventId = `delivery-${attempt.attempt_id}`;
-  const statusLabels: Record<string, string> = {
-    RECEIVED: "Recibido", PREPARING: "Preparando", READY: "Listo para recoger",
-    DELIVERED: "Entregado", CANCELLED: "Cancelado",
-  };
   const restaurantName = typeof attempt.payload.restaurantName === "string" ? attempt.payload.restaurantName : "el restaurante";
   const orderNumber = String(attempt.payload.orderNumber ?? "");
-  const status = statusLabels[String(attempt.payload.status)] ?? "Actualizado";
-  const instruction = attempt.payload.status === "READY" ? " Ya puedes acercarte a recogerlo." : "";
   const body = JSON.stringify({
     attemptId: attempt.attempt_id,
     eventId,
     recipient,
     eventKind: attempt.event_kind,
-    message: `ToqueTin · ${restaurantName} · Pedido ${orderNumber}: ${status}.${instruction}`,
+    message: formatWhatsAppOrderMessage(attempt.payload),
     snapshot: { restaurantName, orderNumber, status: attempt.payload.status, version: attempt.payload.version },
   });
   const secret = required("N8N_WEBHOOK_SECRET");

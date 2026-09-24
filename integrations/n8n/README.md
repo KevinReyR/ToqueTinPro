@@ -22,7 +22,7 @@ No copiar credenciales de Meta, tokens de acceso ni el secreto HMAC al navegador
    - `BAJA`, `SALIR`, `STOP` o `CANCELAR` → `{ "kind": "STOP", "waId": "...", "scope": "ALL" }`.
 3. Otro nodo `Code` genera `timestamp = Math.floor(Date.now()/1000)`, un `eventId` estable derivado del identificador de mensaje de Meta y la firma `sha256=HMAC_SHA256(secret, timestamp + "." + rawBody)`.
 4. `HTTP Request` envía el cuerpo sin modificar a `POST https://<dominio>/api/integrations/whatsapp/inbound` con `x-toquetin-timestamp`, `x-toquetin-event-id` y `x-toquetin-signature`.
-5. Por cada elemento de `messages` en la respuesta, `WhatsApp Business Cloud` envía texto o botones interactivos. Los botones deben transportar `contextId`, `controller`, decisión y versión de política; no el número, token o ID interno del pedido.
+5. Por cada elemento de `messages` en la respuesta, `WhatsApp Business Cloud` envía texto o botones interactivos. El consentimiento usa los títulos visibles `Sí, acepto` y `Ahora no`; los botones transportan `contextId`, `controller`, decisión y versión de política, nunca el número, token o ID interno del pedido.
 
 La única pregunta comercial identifica conjuntamente a ToqueTin y sus restaurantes aliados. Solo se devuelve cuando el contacto todavía no tiene una decisión registrada; el aviso operativo ya está activo y no depende de esa respuesta.
 
@@ -44,6 +44,15 @@ La única pregunta comercial identifica conjuntamente a ToqueTin y sus restauran
 ```
 
 Estados admitidos: `accepted`, `sent`, `delivered`, `read` y `failed`. Los logs del workflow deben excluir `recipient`, mensajes entrantes, códigos de activación y cabeceras de autorización.
+
+## Guía de contenido
+
+- Usar texto nativo de WhatsApp, negritas con `*`, saltos de línea y como máximo un emoji principal por mensaje.
+- Identificar siempre `Pedido {número} · {restaurante}`.
+- `Preparando` muestra la cuenta regresiva aproximada o «Casi listo».
+- `Listo` conserva la mayor prioridad y usa las instrucciones de retiro del restaurante cuando existan.
+- `Entregado` cierra con un agradecimiento breve; `Cancelado` muestra el motivo y orientación de ayuda.
+- Sanitizar contenido dinámico antes de insertarlo en el marcado de WhatsApp. No enviar imágenes, stickers ni mensajes promocionales dentro del seguimiento operativo.
 
 ## Firma en un nodo Code
 

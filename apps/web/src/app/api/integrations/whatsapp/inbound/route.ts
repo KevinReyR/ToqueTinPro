@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { encryptDeliveryToken, tokenDigest } from "@/lib/delivery-token";
 import { createAdminClient } from "@/lib/supabase/server";
-import { activationMessages, normalizeWhatsAppId, verifyIntegrationSignature } from "@/lib/whatsapp-alerts";
+import {
+  activationMessages,
+  consentDecisionMessage,
+  normalizeWhatsAppId,
+  optOutMessage,
+  verifyIntegrationSignature,
+} from "@/lib/whatsapp-alerts";
 
 const inboundSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("OPT_IN"), code: z.string().regex(/^[A-Z2-9]{6}$/), waId: z.string().min(7).max(32) }),
@@ -69,7 +75,7 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ code: "CONSENT_INVALID" }, { status: 422 });
     return NextResponse.json({
       ok: true,
-      messages: [{ kind: "TEXT", text: "Gracias. Guardamos tu elección y puedes cambiarla cuando quieras." }],
+      messages: [{ kind: "TEXT", text: consentDecisionMessage(parsed.data.decision) }],
     });
   }
 
@@ -79,7 +85,7 @@ export async function POST(request: Request) {
   });
   if (error) return NextResponse.json({ code: "REVOCATION_FAILED" }, { status: 500 });
   if (parsed.data.scope === "ALL") await client.rpc("cleanup_expired_whatsapp_contacts");
-  return NextResponse.json({ ok: true, messages: [{ kind: "TEXT", text: "ToqueTin: registramos tu solicitud de baja." }] });
+  return NextResponse.json({ ok: true, messages: [{ kind: "TEXT", text: optOutMessage() }] });
 }
 
 function unauthorized() {

@@ -1,5 +1,9 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { statusLabel, type OrderStatus } from "../domain/order";
+import {
+  formatWhatsAppOrderLine,
+  formatWhatsAppOrderMessage,
+} from "../../../../supabase/functions/_shared/whatsapp-message";
 
 const CHALLENGE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
@@ -57,7 +61,7 @@ export function activationMessages(input: {
   > = [
     {
       kind: "TEXT",
-      text: `ToqueTin: Avisos activos para el Pedido ${input.orderNumber} de ${input.restaurantName}. Estado actual: ${statusLabel(input.status)}.`,
+      text: `✅ *Avisos activos*\n\n${formatWhatsAppOrderLine(input)}\nEstado actual: *${statusLabel(input.status)}*`,
     },
   ];
 
@@ -66,7 +70,7 @@ export function activationMessages(input: {
       kind: "CONSENT_PROMPT",
       contextId: input.contactContextId,
       controller: "TOQUETIN",
-      text: "¿Aceptas recibir novedades comerciales de ToqueTin y sus restaurantes aliados? Responde usando los botones Sí o No. Esto no afecta los avisos de tu pedido.",
+      text: "¿Aceptas recibir novedades comerciales de *ToqueTin y sus restaurantes aliados*?\n\nEsto no afecta los avisos de tu pedido.",
     });
   }
 
@@ -74,11 +78,19 @@ export function activationMessages(input: {
 }
 
 export function statusMessage(payload: Record<string, unknown>): string {
-  const restaurantName = typeof payload.restaurantName === "string" ? payload.restaurantName : "el restaurante";
-  const orderNumber = typeof payload.orderNumber === "string" ? payload.orderNumber : "";
-  const status = typeof payload.status === "string" && ["RECEIVED", "PREPARING", "READY", "DELIVERED", "CANCELLED"].includes(payload.status)
-    ? statusLabel(payload.status as OrderStatus)
-    : "Actualizado";
-  const instruction = payload.status === "READY" ? " Ya puedes acercarte a recogerlo." : "";
-  return `ToqueTin · ${restaurantName} · Pedido ${orderNumber}: ${status}.${instruction}`;
+  return formatWhatsAppOrderMessage(payload);
+}
+
+export function consentDecisionMessage(decision: CommercialConsentDecision): string {
+  if (decision === "GRANTED") {
+    return "✅ *Preferencias guardadas*\n\nRecibirás novedades de ToqueTin y sus restaurantes aliados. Puedes cambiar esta elección cuando quieras.";
+  }
+  if (decision === "DECLINED") {
+    return "👍 *Entendido*\n\nSeguirás recibiendo únicamente los avisos de este pedido.";
+  }
+  return "✅ *Preferencia actualizada*\n\nDejaste de recibir novedades comerciales.";
+}
+
+export function optOutMessage(): string {
+  return "✅ *Avisos desactivados*\n\nNo recibirás más mensajes de ToqueTin en este número.";
 }
