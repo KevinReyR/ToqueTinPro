@@ -11,6 +11,8 @@ create table private.customer_contact_identifiers (
   anonymized_at timestamptz
 );
 
+alter table private.customer_contact_identifiers enable row level security;
+
 create index customer_contact_identifiers_contact_idx
   on private.customer_contact_identifiers(contact_id, identifier_type)
   where anonymized_at is null;
