@@ -25,7 +25,7 @@ No copiar credenciales de Meta, tokens de acceso ni el secreto HMAC al navegador
 
 3. Otro nodo `Code` genera `timestamp = Math.floor(Date.now()/1000)`, un `eventId` estable derivado del identificador de mensaje de Meta y la firma `sha256=HMAC_SHA256(secret, timestamp + "." + rawBody)`.
 4. `HTTP Request` envía el cuerpo sin modificar a `POST https://<dominio>/api/integrations/whatsapp/inbound` con `x-toquetin-timestamp`, `x-toquetin-event-id` y `x-toquetin-signature`.
-5. Por cada elemento de `messages` en la respuesta, `WhatsApp Business Cloud` envía texto o botones interactivos. El consentimiento usa los títulos visibles `Sí, acepto` y `Ahora no`; los botones transportan `contextId`, `controller`, decisión y versión de política, nunca el número, token o ID interno del pedido.
+5. Por cada elemento de `messages` en la respuesta, `WhatsApp Business Cloud` envía texto o botones interactivos. Si `recipientId` es un BSUID completo (`CO.…`), el payload de Graph API debe omitir `to` y usar `recipient: recipientId`; si es un número, debe omitir `recipient` y usar `to: recipientId`. El consentimiento usa los títulos visibles `Sí, acepto` y `Ahora no`; los botones transportan `contextId`, `controller`, decisión y versión de política, nunca el número, token o ID interno del pedido.
 
 La única pregunta comercial identifica conjuntamente a ToqueTin y sus restaurantes aliados. Solo se devuelve cuando el contacto todavía no tiene una decisión registrada; el aviso operativo ya está activo y no depende de esa respuesta.
 
@@ -33,7 +33,7 @@ La única pregunta comercial identifica conjuntamente a ToqueTin y sus restauran
 
 1. `Webhook` recibe el POST firmado de ToqueTin y valida la firma antes de usar el cuerpo.
 2. Comprueba `attemptId` en un Data Table técnico. Si ya está marcado como enviado, devuelve `200` sin volver a llamar a Meta.
-3. `WhatsApp Business Cloud` envía `message` al `recipient`. Dentro de la ventana de conversación se usa texto; fuera de ella se usa una plantilla Utility aprobada con restaurante, pedido y estado como parámetros.
+3. `WhatsApp Business Cloud` envía `message` al destinatario. El nodo de salida debe usar `recipient` para un BSUID completo y `to` para un número, sin copiar un BSUID al campo `to`. Dentro de la ventana de conversación se usa texto; fuera de ella se usa una plantilla Utility aprobada con restaurante, pedido y estado como parámetros.
 4. Guarda únicamente `attemptId` y el identificador devuelto por Meta, y responde `2xx`.
 5. Los estados de Meta se normalizan y se envían a `POST /api/integrations/whatsapp/delivery-status` con el mismo esquema HMAC:
 
