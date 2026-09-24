@@ -140,13 +140,16 @@ El seguimiento deberá ofrecer una acción explícita «Recibir avisos del pedid
 
 ### RF-8A. Gestionar contactos y consentimientos de WhatsApp
 
-La activación operativa de WhatsApp será independiente de cualquier uso comercial. Después de confirmar el aviso del pedido, ToqueTin podrá preguntar por separado por novedades del restaurante y por novedades de ToqueTin. Ambos consentimientos comenzarán desactivados y las campañas permanecerán fuera de alcance.
+La activación operativa de WhatsApp será independiente de cualquier uso comercial. Después de confirmar el aviso del pedido, ToqueTin podrá formular una única pregunta que cubra conjuntamente novedades de ToqueTin y de sus restaurantes aliados, identificando ambos alcances de forma clara. El consentimiento comenzará desactivado, se solicitará una sola vez por contacto hasta que el titular cambie su decisión y las campañas permanecerán fuera de alcance.
 
 **Criterios de aceptación EARS:**
 
 - Cuando un código válido se reciba dentro de diez minutos, el producto deberá consumirlo una sola vez, asociar el canal al pedido y responder «Avisos activos para el Pedido {número} de {restaurante}».
 - Si el código está vencido, fue consumido, fue alterado o no corresponde a una sesión vigente, el producto deberá rechazarlo sin revelar información del pedido.
 - Cuando se capture un identificador de WhatsApp, el producto deberá almacenarlo cifrado y mantener únicamente un digest para deduplicación e idempotencia.
+- Cuando el contacto no haya respondido previamente al consentimiento comercial unificado, el producto deberá enviar exactamente una solicitud que identifique a ToqueTin y a sus restaurantes aliados.
+- Mientras exista una decisión comercial previa, incluida aceptación, rechazo o revocación, el producto no deberá solicitarla nuevamente al activar pedidos posteriores.
+- Cuando Meta entregue eventos de estado sin un mensaje entrante, el adaptador deberá descartarlos del flujo de conversación sin invocar el endpoint de mensajes entrantes ni registrar errores de normalización.
 - Cuando se consulte información desde un restaurante, el producto deberá impedir el acceso a contactos o consentimientos de otros restaurantes.
 - Cuando el cliente responda a una solicitud comercial, el producto deberá registrar de forma inmutable la finalidad, el responsable, la versión de política, la fuente, la decisión y sus fechas.
 - Mientras no exista consentimiento comercial vigente, el producto deberá eliminar o anonimizar el identificador cuando expire el seguimiento operativo.

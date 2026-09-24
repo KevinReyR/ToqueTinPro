@@ -519,7 +519,7 @@ No se usarán mocks como fuente definitiva en rutas de producción. Los dobles d
 | RF-6 | Broadcast recibido; eventos perdidos; stale state; reintento automático; actualización manual; recuperación autoritativa |
 | RF-7 | cambio visual inequívoco; persistencia en `READY`; funcionamiento sin sonido, vibración ni push; accesibilidad sin depender de color |
 | RF-8 | permiso tras acción explícita; aceptación/rechazo; capacidades ausentes; outbox idempotente; éxito, reintentos y fallo definitivo |
-| RF-8A | código válido/vencido/repetido; HMAC y replay; separación de consentimientos; revocación; anonimización; aislamiento por restaurante |
+| RF-8A | código válido/vencido/repetido; HMAC y replay; consentimiento comercial unificado solicitado una sola vez; filtrado de estados de Meta; revocación; anonimización; aislamiento por restaurante |
 | RF-9 | evento inicial; evento por transición; motivo; timestamps; rechazo sin historial; imposibilidad de actualizar/borrar historial |
 | RF-10 | lectura final durante 24 h; expiración exacta; revocación inmediata; solo lectura; respuesta no enumerable |
 | RF-11 | corte `00:00`; corte personalizado; jornada cruzando medianoche; cambio pendiente; conteos; promedios; cancelados excluidos; promedio `null` |

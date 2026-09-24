@@ -4,6 +4,8 @@ import { statusLabel, type OrderStatus } from "../domain/order";
 const CHALLENGE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
+export type CommercialConsentDecision = "GRANTED" | "DECLINED" | "REVOKED";
+
 export function createWhatsAppCode(length = 6): string {
   const bytes = randomBytes(length);
   return Array.from(bytes, (value) => CHALLENGE_ALPHABET[value % CHALLENGE_ALPHABET.length]).join("");
@@ -47,19 +49,28 @@ export function activationMessages(input: {
   orderNumber: string;
   restaurantName: string;
   status: OrderStatus;
+  commercialConsentDecision: CommercialConsentDecision | null;
 }) {
-  return [
+  const messages: Array<
+    | { kind: "TEXT"; text: string }
+    | { kind: "CONSENT_PROMPT"; contextId: string; controller: "TOQUETIN"; text: string }
+  > = [
     {
       kind: "TEXT",
       text: `ToqueTin: Avisos activos para el Pedido ${input.orderNumber} de ${input.restaurantName}. Estado actual: ${statusLabel(input.status)}.`,
     },
-    {
+  ];
+
+  if (!input.commercialConsentDecision) {
+    messages.push({
       kind: "CONSENT_PROMPT",
       contextId: input.contactContextId,
-      controller: "RESTAURANT",
-      text: `¿Aceptas recibir novedades comerciales de ${input.restaurantName}? Responde usando los botones Sí o No. Esto no afecta los avisos de tu pedido.`,
-    },
-  ] as const;
+      controller: "TOQUETIN",
+      text: "¿Aceptas recibir novedades comerciales de ToqueTin y sus restaurantes aliados? Responde usando los botones Sí o No. Esto no afecta los avisos de tu pedido.",
+    });
+  }
+
+  return messages;
 }
 
 export function statusMessage(payload: Record<string, unknown>): string {

@@ -35,7 +35,46 @@ describe("WhatsApp activation", () => {
   it("identifies ToqueTin, the restaurant, order and state", () => {
     expect(statusMessage({ restaurantName: "RestaurantePrueba", orderNumber: "143", status: "READY" }))
       .toBe("ToqueTin · RestaurantePrueba · Pedido 143: Listo para recoger. Ya puedes acercarte a recogerlo.");
-    expect(activationMessages({ contactContextId: "context", restaurantName: "RestaurantePrueba", orderNumber: "143", status: "RECEIVED" })[0].text)
+    expect(activationMessages({
+      contactContextId: "context",
+      restaurantName: "RestaurantePrueba",
+      orderNumber: "143",
+      status: "RECEIVED",
+      commercialConsentDecision: null,
+    })[0].text)
       .toContain("Avisos activos para el Pedido 143 de RestaurantePrueba");
   });
+
+  it("asks once for a combined commercial consent", () => {
+    const messages = activationMessages({
+      contactContextId: "context",
+      restaurantName: "RestaurantePrueba",
+      orderNumber: "143",
+      status: "RECEIVED",
+      commercialConsentDecision: null,
+    });
+
+    expect(messages).toHaveLength(2);
+    expect(messages[1]).toMatchObject({
+      kind: "CONSENT_PROMPT",
+      controller: "TOQUETIN",
+      text: expect.stringContaining("ToqueTin y sus restaurantes aliados"),
+    });
+  });
+
+  it.each(["GRANTED", "DECLINED", "REVOKED"] as const)(
+    "does not ask again when the commercial decision is %s",
+    (commercialConsentDecision) => {
+      const messages = activationMessages({
+        contactContextId: "context",
+        restaurantName: "RestaurantePrueba",
+        orderNumber: "144",
+        status: "RECEIVED",
+        commercialConsentDecision,
+      });
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0].kind).toBe("TEXT");
+    },
+  );
 });

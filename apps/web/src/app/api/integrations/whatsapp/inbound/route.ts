@@ -48,7 +48,13 @@ export async function POST(request: Request) {
       requested_policy_version: process.env.PRIVACY_POLICY_VERSION ?? "2026-09-23",
     });
     if (error || !data) return NextResponse.json({ code: "CHALLENGE_INVALID" }, { status: 422 });
-    const activation = data as { contactContextId: string; orderNumber: string; restaurantName: string; status: "RECEIVED" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED" };
+    const activation = data as {
+      contactContextId: string;
+      orderNumber: string;
+      restaurantName: string;
+      status: "RECEIVED" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
+      commercialConsentDecision: "GRANTED" | "DECLINED" | "REVOKED" | null;
+    };
     return NextResponse.json({ ok: true, messages: activationMessages(activation) });
   }
 
@@ -56,15 +62,15 @@ export async function POST(request: Request) {
     const { error } = await client.rpc("record_whatsapp_consent", {
       requested_context_id: parsed.data.contextId,
       requested_whatsapp_digest: tokenDigest(waId),
-      requested_controller: parsed.data.controller,
+      requested_controller: "TOQUETIN",
       requested_decision: parsed.data.decision,
       requested_policy_version: parsed.data.policyVersion,
     });
     if (error) return NextResponse.json({ code: "CONSENT_INVALID" }, { status: 422 });
-    const messages = parsed.data.controller === "RESTAURANT"
-      ? [{ kind: "CONSENT_PROMPT", contextId: parsed.data.contextId, controller: "TOQUETIN", text: "¿Aceptas recibir novedades comerciales de ToqueTin? Responde usando los botones Sí o No. Esto no afecta los avisos de tu pedido." }]
-      : [{ kind: "TEXT", text: "Gracias. Guardamos tu elección y puedes cambiarla cuando quieras." }];
-    return NextResponse.json({ ok: true, messages });
+    return NextResponse.json({
+      ok: true,
+      messages: [{ kind: "TEXT", text: "Gracias. Guardamos tu elección y puedes cambiarla cuando quieras." }],
+    });
   }
 
   const { error } = await client.rpc("revoke_whatsapp_contact", {
