@@ -4,7 +4,7 @@ import webpush from "npm:web-push@3.6.7";
 
 type Attempt = {
   attempt_id: number;
-  channel: "WEB_PUSH" | "APNS_LIVE_ACTIVITY" | "FCM_LIVE_UPDATE";
+  channel: "WEB_PUSH" | "APNS_LIVE_ACTIVITY" | "FCM_LIVE_UPDATE" | "WHATSAPP";
   token_ciphertext: string;
   capabilities: Record<string, unknown>;
   event_kind: string;
@@ -20,6 +20,7 @@ Deno.serve(async () => {
   const { data, error } = await supabase.rpc("claim_delivery_attempts", { requested_limit: 25 });
   if (error) return Response.json({ code: "CLAIM_FAILED" }, { status: 500 });
   const results = await Promise.allSettled((data as Attempt[]).map(deliver));
+  await supabase.rpc("cleanup_expired_whatsapp_contacts");
   return Response.json({ claimed: data.length, completed: results.filter((result) => result.status === "fulfilled").length });
 });
 
@@ -27,9 +28,15 @@ async function deliver(attempt: Attempt): Promise<void> {
   const started = performance.now();
   try {
     const token = await decryptToken(attempt.token_ciphertext);
+    const publicNonce = attempt.payload.publicNonce;
+    if (typeof publicNonce === "string") {
+      const { data: snapshot } = await supabase.rpc("public_tracking_snapshot", { requested_nonce: publicNonce });
+      if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) attempt.payload = { ...attempt.payload, ...snapshot };
+    }
     if (attempt.channel === "APNS_LIVE_ACTIVITY") await sendApns(token, attempt);
     if (attempt.channel === "FCM_LIVE_UPDATE") await sendFcm(token, attempt);
     if (attempt.channel === "WEB_PUSH") await sendWebPush(token, attempt);
+    if (attempt.channel === "WHATSAPP") await sendWhatsApp(token, attempt);
     await complete(attempt.attempt_id, true, Math.round(performance.now() - started));
   } catch (error) {
     const code = error instanceof Error ? error.message.slice(0, 120) : "UNKNOWN";
@@ -83,7 +90,7 @@ async function sendFcm(deviceToken: string, attempt: Attempt) {
   const message: Record<string, unknown> = {
     token: deviceToken,
     data: { snapshot, eventKind: attempt.event_kind, revoked: String(attempt.event_kind === "TRACKING_REVOKED") },
-    android: { priority: attempt.event_kind === "ORDER_READY" ? "HIGH" : "NORMAL", ttl: "3600s" },
+    android: { priority: ["TRACKING_STARTED", "STATUS_CHANGED", "ORDER_READY", "ORDER_CLOSED"].includes(attempt.event_kind) ? "HIGH" : "NORMAL", ttl: "3600s" },
   };
   const response = await fetch(`https://fcm.googleapis.com/v1/projects/${required("FCM_PROJECT_ID")}/messages:send`, {
     method: "POST",
@@ -94,11 +101,53 @@ async function sendFcm(deviceToken: string, attempt: Attempt) {
 }
 
 async function sendWebPush(endpoint: string, attempt: Attempt) {
+  if (attempt.event_kind === "ESTIMATE_CHANGED") return;
   const p256dh = String(attempt.capabilities.p256dh ?? "");
   const auth = String(attempt.capabilities.auth ?? "");
   if (!p256dh || !auth) throw new Error("WEB_PUSH_KEYS_MISSING");
   webpush.setVapidDetails("mailto:ops@toquetin.example", required("VAPID_PUBLIC_KEY"), required("VAPID_PRIVATE_KEY"));
   await webpush.sendNotification({ endpoint, keys: { p256dh, auth } }, JSON.stringify({ eventKind: attempt.event_kind, snapshot: attempt.payload }));
+}
+
+async function sendWhatsApp(recipient: string, attempt: Attempt) {
+  if (attempt.event_kind === "ESTIMATE_CHANGED") return;
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const eventId = `delivery-${attempt.attempt_id}`;
+  const statusLabels: Record<string, string> = {
+    RECEIVED: "Recibido", PREPARING: "Preparando", READY: "Listo para recoger",
+    DELIVERED: "Entregado", CANCELLED: "Cancelado",
+  };
+  const restaurantName = typeof attempt.payload.restaurantName === "string" ? attempt.payload.restaurantName : "el restaurante";
+  const orderNumber = String(attempt.payload.orderNumber ?? "");
+  const status = statusLabels[String(attempt.payload.status)] ?? "Actualizado";
+  const instruction = attempt.payload.status === "READY" ? " Ya puedes acercarte a recogerlo." : "";
+  const body = JSON.stringify({
+    attemptId: attempt.attempt_id,
+    eventId,
+    recipient,
+    eventKind: attempt.event_kind,
+    message: `ToqueTin · ${restaurantName} · Pedido ${orderNumber}: ${status}.${instruction}`,
+    snapshot: { restaurantName, orderNumber, status: attempt.payload.status, version: attempt.payload.version },
+  });
+  const secret = required("N8N_WEBHOOK_SECRET");
+  const signature = await hmac(body, timestamp, secret);
+  const response = await fetch(required("N8N_WHATSAPP_DELIVERY_WEBHOOK_URL"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-toquetin-event-id": eventId,
+      "x-toquetin-timestamp": timestamp,
+      "x-toquetin-signature": signature,
+    },
+    body,
+  });
+  if (!response.ok) throw new Error(`WHATSAPP_${response.status}`);
+}
+
+async function hmac(body: string, timestamp: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${body}`));
+  return `sha256=${Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("")}`;
 }
 
 async function googleAccessToken(): Promise<string> {

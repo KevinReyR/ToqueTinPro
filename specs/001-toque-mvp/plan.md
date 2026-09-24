@@ -37,7 +37,7 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 | `orders` | Creación, estado actual, transiciones, cancelación, estimación e historial | Única fuente de reglas del ciclo del pedido | RF-1, RF-4, RF-5, RF-9, RF-13 |
 | `tracking` | Token, QR, intercambio por sesión, proyección pública, revocación y expiración | Nunca acepta `order_number` como credencial ni expone IDs internos | RF-2, RF-3, RF-10, RF-12 |
 | `realtime` | Broadcast privado, autorización de tópicos, reconexión y actualización manual | Publica una proyección mínima, no filas completas | RF-6, RF-7, RF-11, RF-13 |
-| `notifications` | Consentimiento, sonido, vibración, Web Push, suscripciones, outbox y reintentos | Ningún fallo revierte o bloquea el cambio a `READY` | RF-7, RF-8 |
+| `notifications` | Selector multicanal, Web Push, WhatsApp, suscripciones, consentimientos, outbox y reintentos | Ningún fallo revierte o bloquea un cambio de estado | RF-7, RF-8, RF-8A |
 | `native-tracking` | App Clip, Live Activity, App Links y Live Updates Android | Solo representa la proyección pública; no decide transiciones | RF-6–RF-8, RF-10, RF-12–RF-14 |
 | `dashboard` | Jornada operativa, listados, agrupaciones, totales y promedios | No consolida restaurantes distintos | RF-11, RF-12 |
 | `persistence` | Migraciones, constraints, índices, funciones transaccionales, triggers, grants y RLS | Sin escrituras de negocio parciales desde la UI | RF-1–RF-14 |
@@ -48,7 +48,7 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 - **Acceso del operador:** inicio y cierre de sesión con correo y contraseña. Las cuentas y membresías se aprovisionan previamente; no habrá registro público, recuperación de contraseña ni administración de usuarios en el MVP. `[RF-12]`
 - **Operación del restaurante:** selección del restaurante activo, dashboard diario, creación de pedidos, presentación del QR, actualización de estimación y acciones de estado. `[RF-1, RF-2, RF-4, RF-5, RF-9, RF-11, RF-13]`
 - **Seguimiento público:** intercambio inicial del token, vista sin registro visible, snapshot público, suscripción en tiempo real, reintento manual y activación opcional de avisos. `[RF-2, RF-3, RF-6–RF-8, RF-10, RF-12, RF-13]`
-- **Procesamiento asíncrono:** despacho y reintento de Web Push, ActivityKit/APNs y FCM a partir de una bandeja de salida persistente. `[RF-7, RF-8, RF-14]`
+- **Procesamiento asíncrono:** despacho y reintento de Web Push, ActivityKit/APNs, FCM y WhatsApp mediante n8n a partir de una bandeja de salida persistente. Supabase conserva el estado autoritativo. `[RF-7, RF-8, RF-8A, RF-14]`
 - **Alertas Android:** las transiciones de estado se enviarán por FCM con prioridad alta y usarán canales de alta importancia separados para alertas generales y `READY`; polling y cambios exclusivos de estimación actualizarán silenciosamente. `[RF-7, RF-8, RF-14]`
 
 ## 3. Tipos y reglas de dominio
@@ -59,7 +59,7 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 - `CancellationReasonCode`: `CUSTOMER_REQUEST`, `PRODUCT_UNAVAILABLE`, `ORDER_ERROR`, `OPERATIONAL_ISSUE`, `OTHER`.
 - `NotificationStatus`: `PENDING`, `SENT`, `FAILED`, `EXPIRED`.
 - `NotificationKind`: `ORDER_READY`.
-- `DeliveryChannel`: `WEB_PUSH`, `APNS_LIVE_ACTIVITY`, `FCM_LIVE_UPDATE`.
+- `DeliveryChannel`: `WEB_PUSH`, `APNS_LIVE_ACTIVITY`, `FCM_LIVE_UPDATE`, `WHATSAPP`.
 - `DeliveryEventKind`: `TRACKING_STARTED`, `STATUS_CHANGED`, `ESTIMATE_CHANGED`, `ORDER_READY`, `ORDER_CLOSED`, `TRACKING_REVOKED`.
 - `RestaurantUserRole`: `OPERATOR`.
 
@@ -363,7 +363,10 @@ Los nombres siguientes son contratos lógicos. Las operaciones autenticadas se i
 | `exchangeTrackingToken` | signed token, anonymous session | grant y nonce público | `TRACKING_INVALID`, `TRACKING_EXPIRED`, `TRACKING_REVOKED` | RF-2, RF-3, RF-10, RF-12 |
 | `getPublicTrackingSnapshot` | anonymous session, public nonce | `PublicTrackingSnapshot` | errores de tracking no enumerables | RF-3, RF-6, RF-10, RF-12, RF-13 |
 | `revokeTrackingSession` | operator session, order | tracking revocado | `FORBIDDEN`, `CONFLICT` | RF-10, RF-12 |
-| `enableReadyAlerts` | anonymous session, public nonce, Web Push subscription | canales activados y capacidades | `TRACKING_EXPIRED`, `PERMISSION_UNAVAILABLE` | RF-8, RF-10 |
+| `listAlertChannels` | anonymous session, public nonce | estado de navegador, App y WhatsApp | `TRACKING_EXPIRED` | RF-8, RF-10 |
+| `createWhatsAppChallenge` | anonymous session, public nonce | código opaco, enlace de apertura y expiración | `TRACKING_EXPIRED`, `PRIVACY_CONFIGURATION_REQUIRED` | RF-8, RF-8A |
+| `consumeWhatsAppChallenge` | evento entrante firmado de n8n | canal activo y mensajes de respuesta | `CHALLENGE_INVALID`, `CHALLENGE_EXPIRED`, `REPLAY_DETECTED` | RF-8, RF-8A |
+| `recordContactConsent` | respuesta firmada de n8n | consentimiento y auditoría | `CONSENT_INVALID`, `REPLAY_DETECTED` | RF-8A |
 | `registerDeliveryChannel` | sesión de tracking, nonce, plataforma, token y capacidades | registro público y vigencia | `TRACKING_EXPIRED`, `DELIVERY_REGISTRATION_FAILED` | RF-8, RF-10, RF-14 |
 | `refreshDeliveryChannelToken` | registro y token rotado | registro actualizado | `TRACKING_EXPIRED`, `FORBIDDEN` | RF-10, RF-14 |
 | `disableDeliveryChannel` | registro vigente | canal revocado | `FORBIDDEN`, `CONFLICT` | RF-10, RF-14 |
@@ -416,13 +419,14 @@ Los contratos devolverán códigos estables en inglés y la UI los traducirá a 
 
 ### 7.4. Pedido listo y avisos
 
-1. El cambio visual a `READY` ocurre siempre y no depende de permisos.
-2. Si el cliente pulsó «Avísame cuando esté listo», se intentan sonido y vibración disponibles.
-3. Después del commit, un trigger interno crea el evento idempotente de outbox y sus intentos por cada canal vigente.
-4. Un webhook asíncrono invoca la función de borde después del commit.
-5. El procesador envía Web Push, ActivityKit/APNs o FCM con sus credenciales privadas y registra el resultado.
-6. Los intentos fallidos se repiten al minuto 1 y minuto 5, con máximo tres intentos totales. Una tarea programada procesa pendientes que no recibieron el webhook inicial.
-7. Un fallo definitivo queda auditado y nunca cambia el estado `READY` ni oculta el aviso visual.
+1. El cambio visual de cada estado ocurre siempre y no depende de permisos.
+2. Si el cliente abrió «Recibir avisos del pedido», puede activar navegador y WhatsApp de forma independiente; App permanece «Próximamente» hasta publicar los enlaces.
+3. WhatsApp usa un código de un solo uso de diez minutos; n8n normaliza el evento entrante y ToqueTin valida firma HMAC, timestamp y replay antes de activar el canal.
+4. Después del commit, un trigger interno crea el evento idempotente de outbox y sus intentos por cada canal vigente. Los ajustes exclusivos de estimación excluyen Web Push y WhatsApp.
+5. Un webhook asíncrono invoca la función de borde después del commit.
+6. El procesador envía Web Push, ActivityKit/APNs, FCM o entrega a n8n un `attemptId` idempotente para WhatsApp y registra el resultado.
+7. Los intentos fallidos se repiten al minuto 1 y minuto 5, con máximo tres intentos totales. Una tarea programada procesa pendientes que no recibieron el webhook inicial.
+8. Un fallo definitivo queda auditado y nunca cambia el estado del pedido ni oculta el seguimiento visual.
 
 **Cobertura:** `[RF-7–RF-9, RF-14]`.
 
@@ -515,6 +519,7 @@ No se usarán mocks como fuente definitiva en rutas de producción. Los dobles d
 | RF-6 | Broadcast recibido; eventos perdidos; stale state; reintento automático; actualización manual; recuperación autoritativa |
 | RF-7 | cambio visual inequívoco; persistencia en `READY`; funcionamiento sin sonido, vibración ni push; accesibilidad sin depender de color |
 | RF-8 | permiso tras acción explícita; aceptación/rechazo; capacidades ausentes; outbox idempotente; éxito, reintentos y fallo definitivo |
+| RF-8A | código válido/vencido/repetido; HMAC y replay; separación de consentimientos; revocación; anonimización; aislamiento por restaurante |
 | RF-9 | evento inicial; evento por transición; motivo; timestamps; rechazo sin historial; imposibilidad de actualizar/borrar historial |
 | RF-10 | lectura final durante 24 h; expiración exacta; revocación inmediata; solo lectura; respuesta no enumerable |
 | RF-11 | corte `00:00`; corte personalizado; jornada cruzando medianoche; cambio pendiente; conteos; promedios; cancelados excluidos; promedio `null` |
@@ -611,7 +616,8 @@ Una entrega solo podrá cerrarse con:
 | RF-5 | orders, tracking | orders, order_status_history | cancelación | motivos, `OTHER`, estados prohibidos |
 | RF-6 | realtime, tracking | tracking_viewers, orders | Broadcast y recuperación | conexión, stale, reintentos, refetch |
 | RF-7 | application-ui, realtime, notifications | orders, notifications | cambio a `READY` | visual, accesibilidad, degradación |
-| RF-8 | notifications | push_subscriptions, tracking_push_subscriptions, notifications | consentimiento y despacho | permisos, idempotencia, reintentos |
+| RF-8 | notifications | delivery_channels, outbox, delivery_attempts | selector multicanal y despacho | permisos, múltiples canales, idempotencia, reintentos |
+| RF-8A | notifications, integrations | WhatsApp challenges, contacts, restaurant contacts, consents, consent events | activación, consentimiento y baja | caducidad, replay, HMAC, aislamiento, anonimización |
 | RF-9 | orders, persistence | order_status_history, orders | historial por transición | append-only, timestamps, rechazos |
 | RF-10 | tracking | tracking_sessions, tracking_viewers | terminal, expiración y revocación | 24 h, lectura, no enumeración |
 | RF-11 | dashboard, auth-tenancy | restaurants, orders, history | jornada y métricas | cortes, cruces, conteos, promedios |
@@ -624,7 +630,7 @@ Una entrega solo podrá cerrarse con:
 - El corte inicial será `00:00` y cualquier operador autorizado podrá programar el siguiente.
 - Los pedidos activos no expiran por tiempo; el tracking termina 24 horas después de `DELIVERED` o `CANCELLED`, o inmediatamente al revocarse.
 - El historial se conserva indefinidamente en el MVP.
-- El cliente no proporciona nombre, correo, teléfono ni otro PII.
+- El seguimiento no exige nombre, correo, teléfono ni otro PII. El identificador de WhatsApp solo se trata cuando el cliente activa voluntariamente ese canal y queda sujeto a cifrado, finalidad y revocación.
 - El operador puede volver a presentar el mismo QR vigente porque el token se regenera; revocar el tracking no borra ni reabre el pedido.
 - La disponibilidad de Push y superficies nativas depende del dispositivo, permisos y plataforma; el seguimiento web y el cambio visual siguen siendo suficientes para completar el flujo.
 - Pagos, menús, carrito, marketplace, fidelización, apps móviles completas con cuentas o historial, POS, hardware avanzado e IA permanecen fuera de alcance.

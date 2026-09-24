@@ -8,3 +8,5 @@
 6. **Idioma consistente:** código, nombres, schemas, commits y logs en inglés; textos visibles para usuarios y mensajes funcionales de la aplicación en español.
 7. **Fallback universal:** ninguna superficie nativa puede sustituir el seguimiento web. El QR debe continuar funcionando sin cuenta ni instalación en cualquier dispositivo compatible con la web.
 8. **Estado único:** web, App Clip, Live Activity y Android representan la misma proyección pública autoritativa; ningún cliente mantiene un estado de pedido independiente.
+9. **Consentimiento por finalidad:** el seguimiento básico nunca exige datos personales. Los canales opcionales que usen un identificador personal, como WhatsApp, requieren una acción explícita, minimización, cifrado, revocación y consentimientos comerciales separados del aviso operativo.
+10. **Supabase autoritativo:** los adaptadores externos, incluido n8n, transportan eventos pero no son fuente de verdad del pedido, de las suscripciones ni de los consentimientos.

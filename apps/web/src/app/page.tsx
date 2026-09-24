@@ -17,7 +17,7 @@ export default function HomePage() {
           <div>
             <p className="eyebrow">tu pedido, siempre visible</p>
             <h1>Menos espera. Más claridad.</h1>
-            <p className="hero-copy">Un QR convierte el teléfono del cliente en su localizador. El estado y el tiempo restante permanecen visibles en la pantalla bloqueada, sin cuentas ni datos personales.</p>
+            <p className="hero-copy">Un QR convierte el teléfono del cliente en su localizador. Puede seguir el pedido sin cuenta ni instalación y, si quiere, activar avisos en sus canales preferidos.</p>
             <div className="hero-actions">
               <Link className="button button-accent" href="/preview/dashboard">Abrir operación</Link>
               <Link className="button button-quiet" href="/preview/tracking">Ver experiencia cliente</Link>
@@ -30,7 +30,7 @@ export default function HomePage() {
           <OrderBoard />
         </section>
       </main>
-      <footer className="legal"><span>© 2026 ToqueTin</span><span>Privacidad · Términos</span></footer>
+      <footer className="legal"><span>© 2026 ToqueTin</span><span className="legal-links"><Link href="/privacidad">Privacidad</Link><Link href="/terminos">Términos</Link></span></footer>
     </div>
   );
 }

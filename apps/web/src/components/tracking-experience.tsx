@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { etaPresentation } from "@/domain/eta";
 import { statusLabel, statusStep, type PublicTrackingSnapshot } from "@/domain/order";
 import { Logo } from "./logo";
-import { EnableAlertsButton } from "./enable-alerts-button";
+import { NotificationChannelSelector } from "./notification-channel-selector";
 
 const stages = ["Recibido", "Preparando", "Listo", "Entregado"];
 
-export function TrackingExperience({ snapshot: initialSnapshot, nonce }: { snapshot: PublicTrackingSnapshot; nonce?: string }) {
+export function TrackingExperience({ snapshot: initialSnapshot, nonce, previewAlerts = false }: { snapshot: PublicTrackingSnapshot; nonce?: string; previewAlerts?: boolean }) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [now, setNow] = useState(() => new Date(initialSnapshot.serverTime));
   const [connected, setConnected] = useState(true);
@@ -79,7 +79,7 @@ export function TrackingExperience({ snapshot: initialSnapshot, nonce }: { snaps
           <span className="live-icon" aria-hidden="true">◉</span>
           <span>Seguimiento disponible en la pantalla bloqueada</span>
         </div>
-        {nonce && <EnableAlertsButton nonce={nonce} />}
+        {(nonce || previewAlerts) && <NotificationChannelSelector nonce={nonce ?? "00000000-0000-4000-8000-000000000000"} preview={previewAlerts} />}
       </article>
     </main>
   );

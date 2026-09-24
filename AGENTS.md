@@ -28,6 +28,7 @@ Componentes incluidos:
 - App Clip de iOS con Live Activity para Lock Screen y Dynamic Island.
 - App Android opcional con Live Update en Android 16+ y notificación persistente en versiones compatibles anteriores.
 - Seguimiento web universal como fallback sin instalación.
+- Selector multicanal opcional para avisos por navegador, aplicaciones compatibles y WhatsApp, con consentimiento explícito y revocación individual.
 
 Fuera del alcance inicial:
 
@@ -41,6 +42,7 @@ Fuera del alcance inicial:
 - Hardware NFC dinámico.
 - Integraciones POS.
 - IA o predicción automática de tiempos.
+- Envío de campañas comerciales; durante el MVP solo se capturan consentimientos separados y se presenta la función como próxima.
 
 ## Comandos
 - Instalar dependencias: `pnpm install`
@@ -138,6 +140,8 @@ La experiencia del cliente debe ser mobile-first y no debe exigir:
 - correo electrónico;
 - teléfono;
 - instalación de una aplicación.
+
+El seguimiento básico tampoco deberá exigir un teléfono. Si el cliente elige WhatsApp como canal opcional, el identificador se tratará como dato personal: deberá cifrarse, separarse por finalidad, poder revocarse y no aparecer en logs ni respuestas públicas.
 
 El cliente debe poder entender el estado de su pedido en pocos segundos.
 

@@ -16,7 +16,7 @@ Persona autorizada para operar un restaurante específico. Crea pedidos, entrega
 
 ### 2.2. Cliente
 
-Persona que espera un pedido. Accede al seguimiento mediante el QR, sin cuenta, registro, instalación ni entrega de datos personales. Necesita comprender rápidamente el estado, el tiempo estimado y las instrucciones de retiro, y recibir un aviso claro cuando el pedido esté listo.
+Persona que espera un pedido. Accede al seguimiento mediante el QR, sin cuenta, registro, instalación ni entrega obligatoria de datos personales. Puede autorizar voluntariamente un canal que requiera un identificador, como WhatsApp, sin perder el acceso básico si lo rechaza. Necesita comprender rápidamente el estado, el tiempo estimado y las instrucciones de retiro, y recibir avisos claros por los canales que active.
 
 ## 3. Historias de usuario
 
@@ -121,17 +121,38 @@ El paso a `Listo` deberá producir un cambio visual inequívoco. Este cambio ser
 - Mientras el pedido permanezca `Listo`, la indicación de retiro deberá conservar la máxima prioridad visual de la vista.
 - Si los avisos adicionales no están disponibles o fallan, el producto deberá mantener íntegro el aviso visual y el seguimiento.
 
-### RF-8. Activar avisos adicionales
+### RF-8. Activar y gestionar avisos adicionales
 
-El seguimiento deberá ofrecer una acción explícita «Avísame cuando esté listo». Solo después de esa acción se solicitarán los permisos aplicables. Los avisos adicionales podrán incluir sonido, vibración o notificación, según las capacidades y permisos disponibles.
+El seguimiento deberá ofrecer una acción explícita «Recibir avisos del pedido». Esta abrirá un selector que permitirá activar uno o varios canales disponibles: navegador, aplicación y WhatsApp. Solo después de elegir un canal se solicitarán sus permisos o datos aplicables. Las aplicaciones sin enlace de distribución permanecerán visibles como «Próximamente». Los avisos operativos cubrirán `Preparando`, `Listo`, `Entregado` y `Cancelado`; los cambios exclusivos de estimación serán silenciosos.
 
 **Criterios de aceptación EARS:**
 
-- Cuando el cliente pulse «Avísame cuando esté listo», el producto deberá solicitar únicamente los permisos necesarios para los canales de aviso disponibles.
-- Cuando el cliente conceda un permiso aplicable, el producto deberá confirmar que el aviso correspondiente quedó activado para ese pedido.
-- Cuando un pedido con avisos activados cambie a `Listo`, el producto deberá intentar los avisos autorizados y disponibles además del cambio visual obligatorio.
+- Cuando el cliente pulse «Recibir avisos del pedido», el producto deberá abrir una hoja accesible titulada «¿Dónde quieres recibir avisos?» y deberá permitir activar más de un canal.
+- Cuando el cliente conceda un permiso aplicable, el producto deberá confirmar qué canal quedó activo para ese pedido y cambiar la acción principal a «Gestionar avisos».
+- Cuando un pedido con avisos activados cambie a `Preparando`, `Listo`, `Entregado` o `Cancelado`, el producto deberá intentar un aviso en cada canal activo; la activación inicial podrá confirmar el estado `Recibido` sin generar un evento duplicado.
+- Cuando solo cambie la estimación, el producto deberá actualizar las superficies compatibles sin producir una alerta perceptible ni enviar un mensaje de WhatsApp.
 - Si el cliente rechaza un permiso, el dispositivo no admite un canal o un aviso falla, el producto deberá explicarlo sin bloquear ni degradar el seguimiento principal.
 - Mientras el cliente no haya realizado la acción explícita, el producto no deberá solicitar permisos de notificación.
+- Mientras las aplicaciones no tengan enlaces de tienda configurados, la opción App deberá mostrarse deshabilitada con el estado «Próximamente».
+- Cuando el cliente elija WhatsApp, el producto deberá crear un código opaco de un solo uso con vigencia de diez minutos, abrir el número central de ToqueTin con el mensaje preparado y activar el canal únicamente tras recibir y validar ese mensaje.
+- Cuando exista un canal activo, el cliente deberá poder desactivarlo individualmente sin afectar el seguimiento ni otros canales.
+- La hoja deberá conservar el foco, admitir teclado y lector de pantalla, respetar la preferencia de reducir movimiento y ofrecer áreas táctiles suficientes.
+
+### RF-8A. Gestionar contactos y consentimientos de WhatsApp
+
+La activación operativa de WhatsApp será independiente de cualquier uso comercial. Después de confirmar el aviso del pedido, ToqueTin podrá preguntar por separado por novedades del restaurante y por novedades de ToqueTin. Ambos consentimientos comenzarán desactivados y las campañas permanecerán fuera de alcance.
+
+**Criterios de aceptación EARS:**
+
+- Cuando un código válido se reciba dentro de diez minutos, el producto deberá consumirlo una sola vez, asociar el canal al pedido y responder «Avisos activos para el Pedido {número} de {restaurante}».
+- Si el código está vencido, fue consumido, fue alterado o no corresponde a una sesión vigente, el producto deberá rechazarlo sin revelar información del pedido.
+- Cuando se capture un identificador de WhatsApp, el producto deberá almacenarlo cifrado y mantener únicamente un digest para deduplicación e idempotencia.
+- Cuando se consulte información desde un restaurante, el producto deberá impedir el acceso a contactos o consentimientos de otros restaurantes.
+- Cuando el cliente responda a una solicitud comercial, el producto deberá registrar de forma inmutable la finalidad, el responsable, la versión de política, la fuente, la decisión y sus fechas.
+- Mientras no exista consentimiento comercial vigente, el producto deberá eliminar o anonimizar el identificador cuando expire el seguimiento operativo.
+- Mientras exista consentimiento comercial vigente, el producto podrá conservar el identificador hasta su revocación, sin habilitar campañas en esta fase.
+- Cuando el titular retire un consentimiento o envíe una palabra de baja, el producto deberá revocar la finalidad correspondiente y conservar la evidencia mínima exigible.
+- El panel deberá mostrar «Clientes y campañas · Próximamente» y no deberá permitir envíos comerciales.
 
 ### RF-9. Registrar el historial de estados
 
@@ -300,7 +321,8 @@ El mismo QR deberá abrir la mejor superficie disponible: App Clip en iOS, app i
 - Marketplace o descubrimiento de restaurantes.
 - Publicidad.
 - Programas de fidelización.
-- Captura de nombre, correo electrónico o teléfono del cliente.
+- Captura obligatoria de nombre, correo electrónico o teléfono del cliente; WhatsApp solo podrá tratarse como canal opcional con consentimiento explícito.
+- Consulta de bases de clientes y envío de campañas comerciales; la fase actual solo conserva consentimientos auditables.
 - Pedidos que involucren más de un restaurante.
 - Aplicaciones móviles completas con cuentas, historial, pagos o funciones distintas del seguimiento ligero aprobado.
 - Localizadores físicos o hardware avanzado para el cliente.
@@ -317,20 +339,22 @@ La funcionalidad se considerará terminada cuando se pueda demostrar que:
 1. Un operador autorizado crea un pedido con número visible único para el restaurante y día operativo, y recibe una explicación clara si intenta repetirlo.
 2. El pedido recién creado queda en `Recibido` y produce un QR exclusivo.
 3. Un cliente abre el QR sin registrarse y reconoce el restaurante, número, estado, estimación e instrucciones disponibles.
-4. El operador avanza el pedido por `Recibido → Preparando → Listo → Entregado`, sin saltos ni retrocesos.
-5. Cada cambio válido aparece automáticamente en el seguimiento y queda registrado una sola vez con su momento de ocurrencia.
-6. Al llegar a `Listo`, el cliente recibe un cambio visual inequívoco y, si los activó y están disponibles, los avisos adicionales aplicables.
-7. Rechazar permisos o usar un dispositivo sin capacidades adicionales no impide completar el seguimiento.
-8. Un pedido `Recibido` o `Preparando` puede cancelarse con uno de los motivos definidos o con un texto obligatorio al elegir `Otro`; uno `Listo`, `Entregado` o `Cancelado` no puede cancelarse.
-9. Ante pérdida de conexión, el cliente conserva el último estado con advertencia y dispone de reintento automático y manual.
-10. Un pedido entregado o cancelado permanece en lectura durante 24 horas y luego deja de revelar información.
-11. Un acceso inválido, manipulado, revocado o expirado no permite consultar el pedido ni inferir información sobre otros pedidos.
-12. Un operador no puede consultar ni modificar pedidos de restaurantes no autorizados.
-13. La estimación puede modificarse en `Recibido` o `Preparando`, el cliente ve automáticamente el valor actualizado y la edición se rechaza desde `Listo`.
-14. El historial permite reconstruir el ciclo del pedido y calcular los tiempos entre sus hitos principales.
-15. El dashboard muestra exclusivamente la jornada del restaurante activo, con totales por estado, total creado, total activo y los dos promedios definidos, sin mezclar restaurantes.
-16. Los promedios incluyen únicamente intervalos que terminan dentro de la jornada mostrada y excluyen cancelados e intervalos incompletos.
-17. La hora de corte comienza en `00:00` de la hora local, cualquier operador autorizado puede cambiarla y el cambio solo afecta la jornada siguiente.
-18. Todos los casos límite definidos tienen un resultado verificable y comprensible para el usuario afectado.
-19. Un QR válido abre App Clip, app instalada o web según la plataforma, siempre con fallback web.
-20. En dispositivos nativos compatibles, `Pedido 143 · Preparando · ~4 min` permanece visible y converge al estado autoritativo hasta el cierre o revocación.
+4. El cliente abre «Recibir avisos del pedido», activa uno o varios canales disponibles y puede revocarlos individualmente sin perder el seguimiento.
+5. WhatsApp solo se activa después de consumir un código válido de un solo uso; las dos finalidades comerciales permanecen separadas y desactivadas inicialmente.
+6. El operador avanza el pedido por `Recibido → Preparando → Listo → Entregado`, sin saltos ni retrocesos.
+7. Cada cambio válido aparece automáticamente en el seguimiento y queda registrado una sola vez con su momento de ocurrencia.
+8. Al llegar a `Listo`, el cliente recibe un cambio visual inequívoco y, si los activó y están disponibles, los avisos adicionales aplicables.
+9. Rechazar permisos o usar un dispositivo sin capacidades adicionales no impide completar el seguimiento.
+10. Un pedido `Recibido` o `Preparando` puede cancelarse con uno de los motivos definidos o con un texto obligatorio al elegir `Otro`; uno `Listo`, `Entregado` o `Cancelado` no puede cancelarse.
+11. Ante pérdida de conexión, el cliente conserva el último estado con advertencia y dispone de reintento automático y manual.
+12. Un pedido entregado o cancelado permanece en lectura durante 24 horas y luego deja de revelar información.
+13. Un acceso inválido, manipulado, revocado o expirado no permite consultar el pedido ni inferir información sobre otros pedidos.
+14. Un operador no puede consultar ni modificar pedidos de restaurantes no autorizados.
+15. La estimación puede modificarse en `Recibido` o `Preparando`, el cliente ve automáticamente el valor actualizado y la edición se rechaza desde `Listo`.
+16. El historial permite reconstruir el ciclo del pedido y calcular los tiempos entre sus hitos principales.
+17. El dashboard muestra exclusivamente la jornada del restaurante activo, con totales por estado, total creado, total activo y los dos promedios definidos, sin mezclar restaurantes.
+18. Los promedios incluyen únicamente intervalos que terminan dentro de la jornada mostrada y excluyen cancelados e intervalos incompletos.
+19. La hora de corte comienza en `00:00` de la hora local, cualquier operador autorizado puede cambiarla y el cambio solo afecta la jornada siguiente.
+20. Todos los casos límite definidos tienen un resultado verificable y comprensible para el usuario afectado.
+21. Un QR válido abre App Clip, app instalada o web según la plataforma, siempre con fallback web.
+22. En dispositivos nativos compatibles, `Pedido 143 · Preparando · ~4 min` permanece visible y converge al estado autoritativo hasta el cierre o revocación.

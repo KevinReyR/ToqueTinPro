@@ -1,10 +1,11 @@
 import { createDecipheriv, createHash, createPrivateKey, sign } from "node:crypto";
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/server";
+import { signIntegrationBody, statusMessage } from "@/lib/whatsapp-alerts";
 
 type DeliveryAttempt = {
   attempt_id: number;
-  channel: "WEB_PUSH" | "APNS_LIVE_ACTIVITY" | "FCM_LIVE_UPDATE";
+  channel: "WEB_PUSH" | "APNS_LIVE_ACTIVITY" | "FCM_LIVE_UPDATE" | "WHATSAPP";
   token_ciphertext: string;
   capabilities: Record<string, unknown>;
   event_kind: string;
@@ -23,6 +24,7 @@ export async function processPendingDeliveries(): Promise<void> {
       const hydratedAttempt = await hydrateAttemptPayload(client, attempt);
       if (attempt.channel === "FCM_LIVE_UPDATE") await sendFcm(token, hydratedAttempt);
       else if (attempt.channel === "WEB_PUSH") await sendWebPush(token, hydratedAttempt);
+      else if (attempt.channel === "WHATSAPP") await sendWhatsApp(token, hydratedAttempt);
       else throw new Error("CHANNEL_NOT_CONFIGURED");
       console.info("Delivery attempt succeeded", {
         attemptId: attempt.attempt_id,
@@ -40,6 +42,7 @@ export async function processPendingDeliveries(): Promise<void> {
       await completeAttempt(attempt.attempt_id, false, Math.round(performance.now() - startedAt), code);
     }
   }
+  await client.rpc("cleanup_expired_whatsapp_contacts");
 }
 
 async function hydrateAttemptPayload(
@@ -56,6 +59,7 @@ async function hydrateAttemptPayload(
 }
 
 async function sendWebPush(endpoint: string, attempt: DeliveryAttempt): Promise<void> {
+  if (attempt.event_kind === "ESTIMATE_CHANGED") return;
   const p256dh = attempt.capabilities.p256dh;
   const auth = attempt.capabilities.auth;
   if (typeof p256dh !== "string" || !p256dh || typeof auth !== "string" || !auth) {
@@ -70,6 +74,37 @@ async function sendWebPush(endpoint: string, attempt: DeliveryAttempt): Promise<
     { endpoint, keys: { p256dh, auth } },
     JSON.stringify({ eventKind: attempt.event_kind, snapshot: attempt.payload }),
   );
+}
+
+async function sendWhatsApp(recipient: string, attempt: DeliveryAttempt): Promise<void> {
+  if (attempt.event_kind === "ESTIMATE_CHANGED") return;
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const eventId = `delivery-${attempt.attempt_id}`;
+  const body = JSON.stringify({
+    attemptId: attempt.attempt_id,
+    eventId,
+    recipient,
+    eventKind: attempt.event_kind,
+    message: statusMessage(attempt.payload),
+    snapshot: {
+      restaurantName: attempt.payload.restaurantName,
+      orderNumber: attempt.payload.orderNumber,
+      status: attempt.payload.status,
+      version: attempt.payload.version,
+    },
+  });
+  const secret = required("N8N_WEBHOOK_SECRET");
+  const response = await fetch(required("N8N_WHATSAPP_DELIVERY_WEBHOOK_URL"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-toquetin-event-id": eventId,
+      "x-toquetin-timestamp": timestamp,
+      "x-toquetin-signature": signIntegrationBody(body, timestamp, secret),
+    },
+    body,
+  });
+  if (!response.ok) throw new Error(`WHATSAPP_${response.status}`);
 }
 
 async function sendFcm(token: string, attempt: DeliveryAttempt): Promise<void> {

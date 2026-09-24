@@ -1,14 +1,13 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { deliveryChannelSchema } from "@/domain/order";
 import { createAdminClient } from "@/lib/supabase/server";
 import { encryptDeliveryToken, tokenDigest } from "@/lib/delivery-token";
 import { verifyTrackingToken } from "@/lib/tracking-token";
 
 const registrationSchema = z.object({
   nonce: z.uuid(),
-  channel: deliveryChannelSchema,
+  channel: z.enum(["WEB_PUSH", "APNS_LIVE_ACTIVITY", "FCM_LIVE_UPDATE"]),
   token: z.string().min(16).max(8192),
   capabilities: z.record(z.string(), z.union([z.string(), z.boolean(), z.number()])).default({}),
 });

@@ -19,3 +19,15 @@ services:
         value: 47LCR3FMKT
       - key: APPLE_APP_BUNDLE_ID
         value: com.toquetin.app
+      - key: N8N_WEBHOOK_SECRET
+        generateValue: true
+      - key: WHATSAPP_BUSINESS_NUMBER
+        sync: false
+      - key: N8N_WHATSAPP_DELIVERY_WEBHOOK_URL
+        sync: false
+      - key: PRIVACY_CONTROLLER_NAME
+        sync: false
+      - key: PRIVACY_CONTACT_EMAIL
+        sync: false
+      - key: PRIVACY_POLICY_VERSION
+        value: 2026-09-23

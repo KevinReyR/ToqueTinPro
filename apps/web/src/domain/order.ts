@@ -15,6 +15,7 @@ export const deliveryChannels = [
   "WEB_PUSH",
   "APNS_LIVE_ACTIVITY",
   "FCM_LIVE_UPDATE",
+  "WHATSAPP",
 ] as const;
 export const deliveryChannelSchema = z.enum(deliveryChannels);
 export type DeliveryChannel = z.infer<typeof deliveryChannelSchema>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, publicTrackingSnapshotSchema } from "./order";
+import { canTransition, deliveryChannelSchema, publicTrackingSnapshotSchema } from "./order";
 import { etaPresentation } from "./eta";
 
 describe("order transitions", () => {
@@ -56,5 +56,11 @@ describe("public tracking snapshot", () => {
       activityExpiresAt: timestamp,
       lastUpdatedAt: timestamp,
     }).success).toBe(true);
+  });
+});
+
+describe("delivery channels", () => {
+  it("accepts WhatsApp as a private delivery adapter", () => {
+    expect(deliveryChannelSchema.parse("WHATSAPP")).toBe("WHATSAPP");
   });
 });

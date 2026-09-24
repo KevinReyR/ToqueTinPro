@@ -34,6 +34,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ publ
   const client = createAdminClient();
   const { data, error } = await client.rpc("disable_delivery_channel", { requested_public_id: publicId, requested_tracking_session_id: session.id });
   if (error || !data) return invalid();
+  await client.rpc("cleanup_expired_whatsapp_contacts");
   return new NextResponse(null, { status: 204 });
 }
 
