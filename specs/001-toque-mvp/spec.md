@@ -151,6 +151,9 @@ La activación operativa de WhatsApp será independiente de cualquier uso comerc
 - Cuando un código válido se reciba dentro de diez minutos, el producto deberá consumirlo una sola vez, asociar el canal al pedido y responder «Avisos activos para el Pedido {número} de {restaurante}».
 - Si el código está vencido, fue consumido, fue alterado o no corresponde a una sesión vigente, el producto deberá rechazarlo sin revelar información del pedido.
 - Cuando se capture un identificador de WhatsApp, el producto deberá almacenarlo cifrado y mantener únicamente un digest para deduplicación e idempotencia.
+- Cuando Meta oculte el número y entregue un identificador de usuario empresarial (`BSUID`), el producto deberá poder activar, responder y enviar avisos mediante ese identificador sin exigir el teléfono del cliente.
+- Cuando Meta entregue simultáneamente un número y un `BSUID`, el producto deberá asociarlos al mismo contacto para conservar consentimientos, bajas y deduplicación aunque el número deje de estar disponible posteriormente.
+- Mientras un identificador de WhatsApp sea opaco, el producto deberá preservarlo sin eliminar letras o separadores y deberá aplicarle el mismo cifrado, digest, minimización y revocación usados para un número.
 - Cuando el contacto no haya respondido previamente al consentimiento comercial unificado, el producto deberá enviar exactamente una solicitud que identifique a ToqueTin y a sus restaurantes aliados.
 - Mientras exista una decisión comercial previa, incluida aceptación, rechazo o revocación, el producto no deberá solicitarla nuevamente al activar pedidos posteriores.
 - Cuando Meta entregue eventos de estado sin un mensaje entrante, el adaptador deberá descartarlos del flujo de conversación sin invocar el endpoint de mensajes entrantes ni registrar errores de normalización.

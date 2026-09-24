@@ -16,10 +16,13 @@ No copiar credenciales de Meta, tokens de acceso ni el secreto HMAC al navegador
 ## Workflow 1: mensajes entrantes
 
 1. `WhatsApp Trigger` recibe el mensaje de la aplicación de Meta. No sustituir el webhook de producción al probar; usar el número de prueba dentro de la misma aplicación.
-2. Antes de normalizar, el workflow descarta cualquier evento que no contenga `messages[0]`. Los eventos `statuses` (`sent`, `delivered`, `read` o `failed`) no pertenecen al flujo de conversación y no deben invocar el endpoint entrante. Después, un nodo `Code` normaliza exactamente uno de estos eventos:
-   - `ACTIVAR ABC123` → `{ "kind": "OPT_IN", "code": "ABC123", "waId": "..." }`.
-   - Respuesta al consentimiento comercial unificado → `{ "kind": "CONSENT", "waId": "...", "contextId": "...", "controller": "TOQUETIN", "decision": "GRANTED|DECLINED|REVOKED", "policyVersion": "..." }`.
-   - `BAJA`, `SALIR`, `STOP` o `CANCELAR` → `{ "kind": "STOP", "waId": "...", "scope": "ALL" }`.
+2. Antes de normalizar, el workflow descarta cualquier evento que no contenga `messages[0]`. Los eventos `statuses` (`sent`, `delivered`, `read` o `failed`) no pertenecen al flujo de conversación y no deben invocar el endpoint entrante. El remitente se resuelve con `messages[0].from_user_id` o `contacts[0].user_id` cuando Meta oculta el teléfono, y con `messages[0].from` o `contacts[0].wa_id` cuando lo comparte. Después, un nodo `Code` normaliza exactamente uno de estos eventos:
+   - `ACTIVAR ABC123` → `{ "kind": "OPT_IN", "code": "ABC123", "recipientId": "CO...", "businessScopedUserId": "CO..." }`.
+   - Respuesta al consentimiento comercial unificado → `{ "kind": "CONSENT", "recipientId": "...", "phoneNumber": "...", "businessScopedUserId": "...", "contextId": "...", "controller": "TOQUETIN", "decision": "GRANTED|DECLINED|REVOKED", "policyVersion": "..." }`.
+   - `BAJA`, `SALIR`, `STOP` o `CANCELAR` → `{ "kind": "STOP", "recipientId": "...", "scope": "ALL" }`.
+
+   `phoneNumber` y `businessScopedUserId` son alias opcionales; al menos uno debe existir. `recipientId` usa primero el BSUID para que las respuestas y estados funcionen aunque el usuario no comparta su número. Los identificadores permanecen cifrados y solo sus digests se usan para deduplicar contactos.
+
 3. Otro nodo `Code` genera `timestamp = Math.floor(Date.now()/1000)`, un `eventId` estable derivado del identificador de mensaje de Meta y la firma `sha256=HMAC_SHA256(secret, timestamp + "." + rawBody)`.
 4. `HTTP Request` envía el cuerpo sin modificar a `POST https://<dominio>/api/integrations/whatsapp/inbound` con `x-toquetin-timestamp`, `x-toquetin-event-id` y `x-toquetin-signature`.
 5. Por cada elemento de `messages` en la respuesta, `WhatsApp Business Cloud` envía texto o botones interactivos. El consentimiento usa los títulos visibles `Sí, acepto` y `Ahora no`; los botones transportan `contextId`, `controller`, decisión y versión de política, nunca el número, token o ID interno del pedido.
@@ -59,16 +62,16 @@ Estados admitidos: `accepted`, `sent`, `delivered`, `read` y `failed`. Los logs 
 El cuerpo firmado debe ser exactamente el que enviará `HTTP Request`, sin volver a serializarlo después de calcular la firma:
 
 ```javascript
-const crypto = require('crypto');
+const crypto = require("crypto");
 const timestamp = String(Math.floor(Date.now() / 1000));
 const rawBody = JSON.stringify($json.payload);
-const signature = `sha256=${crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(`${timestamp}.${rawBody}`).digest('hex')}`;
+const signature = `sha256=${crypto.createHmac("sha256", $env.N8N_WEBHOOK_SECRET).update(`${timestamp}.${rawBody}`).digest("hex")}`;
 return [{ json: { rawBody, timestamp, signature, eventId: $json.eventId } }];
 ```
 
 ## Operación y pruebas
 
-- Ejecutar las migraciones `202609230001`, `202609230002`, `202609240001` y `202609240002` antes de activar workflows.
+- Ejecutar las migraciones `202609230001`, `202609230002`, `202609240001`, `202609240002` y `202609240003` antes de activar workflows.
 - Probar código correcto, vencido, repetido y alterado.
 - Reenviar el mismo `eventId` y confirmar `409 REPLAY_DETECTED`.
 - Reenviar el mismo `attemptId` al workflow de salida y confirmar un solo mensaje de Meta.
