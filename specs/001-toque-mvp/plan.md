@@ -446,6 +446,7 @@ Los contratos devolverán códigos estables en inglés y la UI los traducirá a 
 ### 7.6. Dashboard y jornada operativa
 
 - La lista incluye pedidos cuyo `operational_day_started_at` corresponde a la jornada seleccionada.
+- El tablero separa pedidos activos de pedidos finalizados; estos últimos se ordenan por cierre descendente, se paginan y abren un detalle de solo lectura basado en `order_status_history`.
 - Total activo equivale a `RECEIVED + PREPARING + READY`.
 - Preparación promedia `ready_at - preparing_at` para intervalos cuyo `ready_at` cae dentro de la jornada mostrada.
 - Recogida promedia `delivered_at - ready_at` para intervalos cuyo `delivered_at` cae dentro de la jornada mostrada.

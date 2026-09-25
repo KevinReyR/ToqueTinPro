@@ -193,10 +193,15 @@ El dashboard deberá presentar la operación del restaurante activo para su día
 
 El resumen incluirá los pedidos creados durante la jornada, sus totales por estado, el total de pedidos creados, el total de pedidos activos, el tiempo promedio de preparación y el tiempo promedio de recogida. Se considerarán activos los pedidos en `Recibido`, `Preparando` o `Listo`.
 
+Debajo del tablero operativo se mostrará una lista de los pedidos finalizados de la jornada actual. La lista incluirá únicamente pedidos `Entregado` y `Cancelado`, permitirá buscar por número y filtrar por resultado, y ofrecerá un detalle de solo lectura con sus hitos, duraciones, instrucciones de retiro y motivo de cancelación cuando corresponda.
+
 **Criterios de aceptación EARS:**
 
 - Cuando un operador acceda al dashboard, el producto deberá mostrar únicamente los pedidos del restaurante activo que correspondan al día operativo.
 - El producto deberá agrupar los pedidos por su estado actual para facilitar la priorización.
+- Cuando existan pedidos finalizados en la jornada, el producto deberá mostrarlos por fecha de cierre descendente y deberá permitir filtrarlos entre `Entregado` y `Cancelado` sin mezclarlos con pedidos activos.
+- Cuando el operador seleccione un pedido finalizado, el producto deberá mostrar su historial y duraciones en modo de solo lectura, sin ofrecer acciones que alteren un estado terminal.
+- Si la jornada aún no tiene pedidos finalizados o una búsqueda no produce resultados, el producto deberá mostrar un estado vacío que explique la situación sin ocultar el tablero activo.
 - Cuando un pedido cambie de estado, el producto deberá reflejarlo en el grupo y total correspondientes.
 - Mientras se muestre una jornada, el producto deberá presentar el total de pedidos creados en ella y el total de pedidos que continúan activos.
 - Cuando un intervalo `Preparando → Listo` termine dentro del día operativo, el producto deberá incluir su duración en el tiempo promedio de preparación de esa jornada.

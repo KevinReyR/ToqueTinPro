@@ -16,4 +16,11 @@ test("operator dashboard exposes one action per order", async ({ page }) => {
   await page.goto("/preview/dashboard");
   await expect(page.getByRole("heading", { name: "Pedidos en curso" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Marcar como listo" })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Pedidos finalizados" })).toBeVisible();
+  await expect(page.getByText("Preparación media")).toBeVisible();
+  await page.getByRole("button", { name: "Ver detalle" }).first().click();
+  await expect(page.getByRole("dialog", { name: "Pedido #140" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Línea de tiempo" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Pedido #140" })).not.toBeVisible();
 });
