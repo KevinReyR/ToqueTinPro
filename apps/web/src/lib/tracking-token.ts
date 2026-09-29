@@ -20,8 +20,8 @@ export function verifyTrackingToken(
   const expected = createHmac("sha256", secret)
     .update(`${version}.${nonce}`)
     .digest("base64url");
-  const receivedBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
+  const receivedBuffer = Buffer.from(signature, "ascii");
+  const expectedBuffer = Buffer.from(expected, "ascii");
   if (receivedBuffer.length !== expectedBuffer.length) return null;
   if (!timingSafeEqual(receivedBuffer, expectedBuffer)) return null;
   return { nonce };

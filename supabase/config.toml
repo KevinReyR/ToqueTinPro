@@ -1,4 +1,4 @@
-project_id = "toquetin"
+project_id = "ToqueTinPro"
 
 [api]
 enabled = true
@@ -12,6 +12,10 @@ major_version = 17
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
+site_url = "https://toquetinpro.netlify.app"
+additional_redirect_urls = ["http://127.0.0.1:3000/**", "https://toquetinpro.netlify.app/**"]
 enable_signup = false
 enable_anonymous_sign_ins = true
+
+[auth.email]
+enable_confirmations = false

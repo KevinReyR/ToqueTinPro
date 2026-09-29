@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
+    "bootstrap:demo": "pnpm --filter @toquetin/web exec node scripts/bootstrap-demo.mjs",
     "dev": "pnpm --filter @toquetin/web dev",
     "build": "pnpm --filter @toquetin/web build",
     "start": "pnpm --filter @toquetin/web start",
