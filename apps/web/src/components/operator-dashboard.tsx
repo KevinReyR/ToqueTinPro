@@ -21,10 +21,12 @@ import { createBrowserClient } from "@/lib/supabase/browser";
 import { DashboardSummary } from "./dashboard-summary";
 import { FinalizedOrders } from "./finalized-orders";
 import { Logo } from "./logo";
+import { NfcTagManager, type NfcAssignmentTarget } from "./nfc-tag-manager";
 import { OrderDetailDrawer } from "./order-detail-drawer";
+import type { NfcInventory } from "@/lib/nfc-tags-client";
 
 type Restaurant = { id: number; name: string };
-type CreatedOrder = { orderNumber: string; trackingUrl: string; qrDataUrl: string };
+type CreatedOrder = { orderId: number; orderNumber: string; trackingUrl: string; qrDataUrl: string };
 type CancellationReason = "CUSTOMER_REQUEST" | "UNAVAILABLE_ITEM" | "ORDER_ERROR" | "OPERATIONAL_ISSUE" | "OTHER";
 
 const activeStatuses = ["RECEIVED", "PREPARING", "READY"] as const;
@@ -55,6 +57,8 @@ export function OperatorDashboard() {
   const [orderDetail, setOrderDetail] = useState<OperatorOrderDetail>();
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string>();
+  const [nfcInventory, setNfcInventory] = useState<NfcInventory>({ tags: [], orderStates: [] });
+  const [nfcAssignmentTarget, setNfcAssignmentTarget] = useState<NfcAssignmentTarget>();
 
   const loadSnapshot = useCallback(async ({
     selectedRestaurantId,
@@ -218,7 +222,7 @@ export function OperatorDashboard() {
           <span className="topbar-coming-soon" aria-label="Clientes y campañas, próximamente">Clientes y campañas · Próximamente</span>
           <select aria-label="Restaurante activo" value={restaurantId} onChange={(event) => {
             const id = Number(event.target.value);
-            setRestaurantId(id); setSnapshot(undefined); setQuery(""); setDebouncedQuery(""); setFilter("ALL"); setCreated(undefined);
+            setRestaurantId(id); setSnapshot(undefined); setQuery(""); setDebouncedQuery(""); setFilter("ALL"); setCreated(undefined); setNfcInventory({ tags: [], orderStates: [] }); setNfcAssignmentTarget(undefined);
           }}>{restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</select>
           <button className="button button-accent topbar-create" onClick={() => createPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} type="button">Crear pedido</button>
           <button className="button button-quiet" onClick={() => void client.auth.signOut().then(() => router.replace("/operator/login"))} type="button">Salir</button>
@@ -252,7 +256,9 @@ export function OperatorDashboard() {
                       <article className="order-card" key={order.id}>
                         <p className="order-number">#{order.orderNumber}</p>
                         <div className="order-meta"><span>{activeTimeLabel(order, now)}</span><span>{formatClock(order.createdAt, timezone)}</span></div>
+                        <p className={`nfc-order-status nfc-order-${nfcStatusForOrder(nfcInventory, order.id).toLowerCase()}`}>{nfcStatusLabel(nfcInventory, order.id)}</p>
                         <button className="button button-accent card-action" onClick={() => void transition(order)} type="button">{status === "RECEIVED" ? "Empezar preparación" : status === "PREPARING" ? "Marcar como listo" : "Confirmar entrega"}</button>
+                        <button className="button button-quiet nfc-order-action" onClick={() => setNfcAssignmentTarget({ id: order.id, orderNumber: order.orderNumber })} type="button">Asignar tarjeta NFC</button>
                         {status !== "READY" && <button className="cancel-order" onClick={() => setCancellingOrder(order)} type="button">Cancelar pedido</button>}
                       </article>
                     ))}
@@ -270,9 +276,16 @@ export function OperatorDashboard() {
               <label>Instrucciones de retiro<textarea name="pickupInstructions" maxLength={240} rows={3} /></label>
               <button className="button button-accent" disabled={creating}>{creating ? "Creando…" : "Crear pedido"}</button>
             </form>
-            {created && <div className="qr-result"><Image alt={`QR del pedido ${created.orderNumber}`} src={created.qrDataUrl} width={320} height={320} unoptimized /><strong>Pedido #{created.orderNumber}</strong><p>Muestra este código al cliente.</p></div>}
+            {created && <div className="qr-result"><Image alt={`QR del pedido ${created.orderNumber}`} src={created.qrDataUrl} width={320} height={320} unoptimized /><strong>Pedido #{created.orderNumber}</strong><p>Muestra este código al cliente o asigna una tarjeta.</p><button className="button button-quiet" type="button" onClick={() => setNfcAssignmentTarget({ id: created.orderId, orderNumber: created.orderNumber })}>Asignar tarjeta NFC</button></div>}
           </aside>
         </div>
+
+        {restaurantId && <NfcTagManager
+          restaurantId={restaurantId}
+          assignmentTarget={nfcAssignmentTarget}
+          onAssignmentTargetChange={setNfcAssignmentTarget}
+          onInventoryChange={setNfcInventory}
+        />}
 
         {snapshot && <FinalizedOrders
           orders={snapshot.finalizedOrders}
@@ -305,4 +318,16 @@ function activeTimeLabel(order: ActiveOperatorOrder, now: number): string {
   }
   const minutes = Math.ceil((Date.parse(order.estimatedReadyAt) - now) / 60_000);
   return minutes > 0 ? `~${minutes} min` : "Casi listo";
+}
+
+function nfcStatusForOrder(inventory: NfcInventory, orderId: number): "NONE" | "PENDING" | "CONSUMED" {
+  const state = inventory.orderStates.find((candidate) => candidate.orderId === orderId);
+  return state?.status === "PENDING" ? "PENDING" : state?.status === "CONSUMED" ? "CONSUMED" : "NONE";
+}
+
+function nfcStatusLabel(inventory: NfcInventory, orderId: number): string {
+  const state = inventory.orderStates.find((candidate) => candidate.orderId === orderId);
+  if (state?.status === "PENDING") return `${state.tagLabel} · pendiente de lectura`;
+  if (state?.status === "CONSUMED") return "NFC leído · tarjeta disponible";
+  return "Sin tarjeta NFC asignada";
 }

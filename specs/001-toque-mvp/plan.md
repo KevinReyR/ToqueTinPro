@@ -14,7 +14,7 @@ El plan obedece estas reglas:
 - No introducir funciones excluidas por la spec ni microservicios. App Clip, Live Activity y Android ligero quedan expresamente incluidos por RF-14.
 - Tratar el aviso visual de `READY` como garantía funcional; sonido, vibración y Web Push serán mejoras progresivas que nunca bloquearán el seguimiento.
 
-**Cobertura:** `[RF-1–RF-14]`.
+**Cobertura:** `[RF-1–RF-15]`.
 
 ## 2. Arquitectura y estructura de módulos
 
@@ -40,8 +40,8 @@ Los componentes visuales podrán invocar contratos de aplicación y presentar re
 | `notifications`   | Selector multicanal, Web Push, WhatsApp, suscripciones, consentimientos, outbox y reintentos | Ningún fallo revierte o bloquea un cambio de estado                | RF-7, RF-8, RF-8A                     |
 | `native-tracking` | App Clip, Live Activity, App Links y Live Updates Android                                    | Solo representa la proyección pública; no decide transiciones      | RF-6–RF-8, RF-10, RF-12–RF-14         |
 | `dashboard`       | Jornada operativa, listados, agrupaciones, totales y promedios                               | No consolida restaurantes distintos                                | RF-11, RF-12                          |
-| `persistence`     | Migraciones, constraints, índices, funciones transaccionales, triggers, grants y RLS         | Sin escrituras de negocio parciales desde la UI                    | RF-1–RF-14                            |
-| `shared`          | Validación, errores, fechas UTC, zona horaria, normalización y DTO seguros                   | No contiene reglas específicas de presentación                     | RF-1–RF-14                            |
+| `persistence`     | Migraciones, constraints, índices, funciones transaccionales, triggers, grants y RLS         | Sin escrituras de negocio parciales desde la UI                    | RF-1–RF-15                            |
+| `shared`          | Validación, errores, fechas UTC, zona horaria, normalización y DTO seguros                   | No contiene reglas específicas de presentación                     | RF-1–RF-15                            |
 
 ### 2.3. Superficies de aplicación
 
@@ -102,7 +102,7 @@ Una petición que repita exactamente una transición ya aplicada devolverá el e
 - No habrá borrado de pedidos ni eventos de historial en el MVP; las relaciones críticas usarán borrado restringido.
 - Las tablas expuestas tendrán RLS y grants mínimos. Las tablas con material de Web Push vivirán en un esquema no expuesto.
 
-**Cobertura:** `[RF-1–RF-14]`.
+**Cobertura:** `[RF-1–RF-15]`.
 
 ### 4.2. Entidades
 
@@ -350,7 +350,7 @@ No contiene IDs internos, organización, actores, historial interno ni token:
 - `service_role`, secretos HMAC y clave privada VAPID existirán solo en servidor o función de borde.
 - Los logs redactarán tokens, endpoints, claves push, cookies y credenciales.
 
-**Cobertura:** `[RF-1–RF-14]`.
+**Cobertura:** `[RF-1–RF-15]`.
 
 ## 6. Contratos de aplicación
 
@@ -385,7 +385,7 @@ Los nombres siguientes son contratos lógicos. Las operaciones autenticadas se i
 
 Los contratos devolverán códigos estables en inglés y la UI los traducirá a español. Accesos inválidos, inexistentes, manipulados, expirados o revocados compartirán una respuesta pública no enumerable. Los errores no incluirán IDs de otros tenants, SQL, claims, tokens ni trazas internas.
 
-**Cobertura:** `[RF-1–RF-14]`.
+**Cobertura:** `[RF-1–RF-15]`.
 
 ## 7. Flujo base y flujos alternos
 
@@ -473,8 +473,8 @@ Los contratos devolverán códigos estables en inglés y la UI los traducirá a 
 
 | Decisión                                     | Justificación                                              | Alternativa descartada                                  | Motivo del descarte                                      | RF                      |
 | -------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------- | ----------------------- |
-| Monolito modular                             | Menor complejidad operativa y transacciones locales claras | Microservicios                                          | Infraestructura prematura para un único flujo            | RF-1–RF-14              |
-| Server Components y servidor por defecto     | Reduce datos y secretos en cliente                         | Aplicación totalmente cliente                           | Mayor superficie de autorización y exposición accidental | RF-1–RF-14              |
+| Monolito modular                             | Menor complejidad operativa y transacciones locales claras | Microservicios                                          | Infraestructura prematura para un único flujo            | RF-1–RF-15              |
+| Server Components y servidor por defecto     | Reduce datos y secretos en cliente                         | Aplicación totalmente cliente                           | Mayor superficie de autorización y exposición accidental | RF-1–RF-15              |
 | Supabase Auth con cuentas preaprovisionadas  | Satisface operador autorizado sin ampliar onboarding       | Registro público o proveedor social                     | Fuera de alcance y dependencias adicionales              | RF-12                   |
 | Sesión anónima invisible                     | Permite Realtime privado sin PII ni registro visible       | Acceso universal con rol `anon`                         | No limita cada cliente a un pedido                       | RF-2, RF-3, RF-6, RF-12 |
 | RLS más autorización de servidor             | Defensa en profundidad multi-tenant                        | Filtros solo en aplicación                              | Un error de consulta podría filtrar otro restaurante     | RF-12                   |
@@ -608,7 +608,7 @@ Una entrega solo podrá cerrarse con:
 - Implementar corte vigente/pendiente, listados, conteos y promedios.
 - Completar E2E, matriz de dispositivos, asesores, build y revisión de secretos.
 
-**Salida:** operación diaria verificable y todos los criterios de finalización cubiertos. `[RF-1–RF-14]`
+**Salida:** operación diaria verificable y todos los criterios de finalización cubiertos. `[RF-1–RF-15]`
 
 ## 12. Matriz de trazabilidad final
 
@@ -628,6 +628,7 @@ Una entrega solo podrá cerrarse con:
 | RF-11 | dashboard, auth-tenancy                 | restaurants, orders, history                                                 | jornada y métricas                | cortes, cruces, conteos, promedios                    |
 | RF-12 | auth-tenancy, tracking, persistence     | todas las entidades con tenant o viewer                                      | operador y cliente aislados       | RLS, tópicos, acceso cruzado                          |
 | RF-13 | orders, realtime, tracking              | orders                                                                       | modificar y difundir estimación   | estados permitidos, rechazo, snapshot                 |
+| RF-15 | tracking, auth-tenancy, application-ui | nfc_tags, nfc_tag_assignments                                                | asignación y consumo NFC          | RLS, concurrencia, rotación, reasignación             |
 
 ## 13. Supuestos y límites del plan
 
@@ -638,4 +639,14 @@ Una entrega solo podrá cerrarse con:
 - El seguimiento no exige nombre, correo, teléfono ni otro PII. El identificador de WhatsApp solo se trata cuando el cliente activa voluntariamente ese canal y queda sujeto a cifrado, finalidad y revocación.
 - El operador puede volver a presentar el mismo QR vigente porque el token se regenera; revocar el tracking no borra ni reabre el pedido.
 - La disponibilidad de Push y superficies nativas depende del dispositivo, permisos y plataforma; el seguimiento web y el cambio visual siguen siendo suficientes para completar el flujo.
-- Pagos, menús, carrito, marketplace, fidelización, apps móviles completas con cuentas o historial, POS, hardware avanzado e IA permanecen fuera de alcance.
+- Pagos, menús, carrito, marketplace, fidelización, apps móviles completas con cuentas o historial, POS, hardware NFC criptográfico avanzado e IA permanecen fuera de alcance.
+
+## 14. Extensión aprobada — Tarjetas NFC reutilizables
+
+El acceso NFC complementa el QR sin alterar su contrato. Cada NTAG215 se programa una sola vez con una URL NDEF corta que contiene un token aleatorio. PostgreSQL conserva solo su digest y una bitácora de asignaciones. Una operación transaccional autenticada vincula una tarjeta con un pedido activo; otra operación exclusiva de servidor consume la primera lectura y devuelve el `public_nonce` vigente para que Next.js emita el token firmado habitual en el fragmento de la redirección.
+
+La persistencia se amplía con `nfc_tags` y `nfc_tag_assignments`. Ambas tablas quedan bajo RLS y las mutaciones operativas validan `is_restaurant_member`. Dos índices parciales impiden más de una asignación pendiente por tarjeta o pedido. La reasignación confirmada cierra la relación anterior con `REASSIGNED`; el consumo la cierra con `CONSUMED`. Los tokens rotados no se conservan en claro y no se obtiene acceso mediante el UID físico de la etiqueta.
+
+La web añade endpoints autenticados para inventario, registro, rotación, desactivación y asignación, además de `GET /n/[token]` como único resolvedor público. El panel permite administrar varias tarjetas, copiar una URL de programación mostrada una sola vez y asignar una tarjeta después de crear el pedido o desde cualquier pedido activo. En iPhone la escritura se realiza externamente con NFC Tools; la lectura del cliente solo requiere el comportamiento nativo del teléfono.
+
+La verificación cubre RLS multi-tenant, digest y rotación del token, consumo concurrente único, reasignación auditada, pedidos terminales, respuestas públicas indistinguibles y equivalencia entre el destino NFC y el seguimiento QR.

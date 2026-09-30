@@ -33,6 +33,7 @@ Persona que espera un pedido. Accede al seguimiento mediante el QR, sin cuenta, 
 - **HU-11 — Ajustar estimación:** Como operador, quiero corregir la estimación de un pedido que aún no está listo para mantener informado al cliente ante cambios en la preparación.
 - **HU-12 — Definir el día operativo:** Como operador, quiero establecer la hora de corte del restaurante para que el dashboard represente correctamente su jornada habitual.
 - **HU-13 — Mantener el pedido visible:** Como cliente, quiero ver el número, estado y tiempo restante en la pantalla bloqueada cuando mi dispositivo lo permita, sin perder el seguimiento web si la capacidad nativa no está disponible.
+- **HU-14 — Entregar acceso por NFC:** Como operador, quiero asignar temporalmente una tarjeta NFC reutilizable a un pedido activo para que el cliente pueda abrir el mismo seguimiento del QR con un toque y la tarjeta quede disponible después de la primera lectura.
 
 ## 4. Requisitos funcionales
 
@@ -254,6 +255,24 @@ El mismo QR deberá abrir la mejor superficie disponible: App Clip en iOS, app i
 - Si la capacidad nativa está deshabilitada, falla, no existe o el cliente rechaza permisos, el seguimiento web deberá permanecer completo y utilizable.
 - El producto no deberá incluir PII, tokens, IDs internos ni instrucciones sensibles en Lock Screen, Dynamic Island o notificaciones.
 
+### RF-15. Entregar acceso mediante tarjetas NFC reutilizables
+
+Cada restaurante podrá registrar varias tarjetas NFC con un nombre visible. Cada tarjeta contendrá una URL NDEF fija con un token aleatorio que no será el número del pedido, el identificador interno del pedido ni el token firmado del QR. Después de crear un pedido, un operador podrá asignarle una tarjeta disponible. La primera apertura válida consumirá de forma atómica la asignación, liberará la tarjeta y redirigirá al mismo seguimiento público que entrega el QR.
+
+**Criterios de aceptación EARS:**
+
+- Cuando un operador autorizado registre una tarjeta, el producto deberá generar una URL corta de programación y mostrarla una sola vez junto con instrucciones para escribirla como registro NDEF.
+- Mientras una tarjeta pertenezca a un restaurante, únicamente operadores autorizados de ese restaurante podrán consultarla, asignarla, rotarla o desactivarla.
+- Cuando un operador asigne una tarjeta disponible a un pedido `Recibido`, `Preparando` o `Listo`, el producto deberá registrar una única asignación activa para la tarjeta y el pedido.
+- Cuando una tarjeta ya asignada se asigne a otro pedido tras confirmación explícita, el producto deberá cerrar la asignación anterior con motivo `REASSIGNED` y no deberá revocar el QR ni la sesión de seguimiento del pedido anterior.
+- Cuando un cliente abra por primera vez una tarjeta asignada, el producto deberá consumir la asignación una sola vez, liberar la tarjeta y redirigir al seguimiento público vigente del pedido.
+- Si dos lecturas intentan consumir simultáneamente la misma asignación, solo una deberá obtener acceso y la otra deberá recibir la respuesta genérica de tarjeta no disponible.
+- Si la tarjeta está libre, desactivada, ya consumida, tiene un token manipulado o su pedido o seguimiento no son válidos, el producto deberá mostrar una respuesta genérica sin revelar información del restaurante ni del pedido.
+- Si un operador intenta asignar una tarjeta a un pedido `Entregado` o `Cancelado`, el producto deberá rechazar la operación.
+- Cuando se rote el token de una tarjeta, el token anterior deberá dejar de resolver inmediatamente y el nuevo enlace deberá mostrarse una sola vez para reprogramar la tarjeta.
+- El seguimiento abierto mediante NFC deberá conservar todas las funciones del seguimiento abierto por QR y deberá continuar funcionando después de que la tarjeta sea reutilizada.
+- El funcionamiento del QR no deberá depender de la disponibilidad, asignación o lectura de una tarjeta NFC.
+
 ## 5. Requisitos no funcionales
 
 ### RNF-1. Seguridad
@@ -328,6 +347,10 @@ El mismo QR deberá abrir la mejor superficie disponible: App Clip en iOS, app i
 - **Sin intervalos completados:** el dashboard indica que aún no existen datos para el promedio correspondiente.
 - **Pedido que cruza la hora de corte:** pertenece a la jornada en la que fue creado, pero cada duración se incorpora al promedio de la jornada en la que termina su intervalo correspondiente.
 - **Cambio de hora de corte:** no reagrupa la jornada en curso ni sus pedidos; la nueva hora comienza a regir desde la jornada siguiente.
+- **Tarjeta NFC sin asignación:** muestra una explicación genérica y no revela el último pedido al que estuvo vinculada.
+- **Dos lecturas NFC simultáneas:** solo la primera consume la asignación y abre el seguimiento; la segunda no obtiene información del pedido.
+- **Tarjeta NFC reutilizada:** el seguimiento abierto previamente continúa mediante su propia sesión, pero el enlace físico solo resuelve la asignación nueva.
+- **Tarjeta NFC perdida o copiada:** el operador puede rotar su token; el enlace anterior queda inválido, aunque una NTAG215 no impide la copia física de un registro NDEF.
 
 ## 7. Fuera de alcance
 
@@ -340,7 +363,7 @@ El mismo QR deberá abrir la mejor superficie disponible: App Clip en iOS, app i
 - Consulta de bases de clientes y envío de campañas comerciales; la fase actual solo conserva consentimientos auditables.
 - Pedidos que involucren más de un restaurante.
 - Aplicaciones móviles completas con cuentas, historial, pagos o funciones distintas del seguimiento ligero aprobado.
-- Localizadores físicos o hardware avanzado para el cliente.
+- Localizadores físicos distintos de las tarjetas NFC NDEF reutilizables aprobadas, o hardware criptográfico avanzado para el cliente.
 - Integraciones con sistemas de punto de venta.
 - Predicción automática de tiempos o decisiones basadas en inteligencia artificial.
 - Comparaciones, métricas consolidadas o gestión operativa entre restaurantes.
@@ -373,3 +396,6 @@ La funcionalidad se considerará terminada cuando se pueda demostrar que:
 20. Todos los casos límite definidos tienen un resultado verificable y comprensible para el usuario afectado.
 21. Un QR válido abre App Clip, app instalada o web según la plataforma, siempre con fallback web.
 22. En dispositivos nativos compatibles, `Pedido 143 · Preparando · ~4 min` permanece visible y converge al estado autoritativo hasta el cierre o revocación.
+23. Un operador registra varias tarjetas NFC por restaurante, programa su URL fija, asigna una después de crear un pedido y puede reasignarla con confirmación.
+24. La primera lectura válida de una tarjeta consume la asignación, abre el mismo seguimiento del QR y deja la tarjeta disponible sin interrumpir el seguimiento ya abierto.
+25. Una tarjeta libre, desactivada, rotada, manipulada o asignada a un pedido no válido no revela información, y el aislamiento entre restaurantes permanece vigente.

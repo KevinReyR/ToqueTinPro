@@ -203,6 +203,32 @@ h1 { max-width: 13ch; margin-bottom: 1.5rem; font-size: clamp(3rem, 7vw, 6.8rem)
 .create-panel h2 { max-width: 12ch; font-size: 1.8rem; line-height: 1.02; letter-spacing: -.04em; }
 .qr-result { display: grid; justify-items: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); text-align: center; }
 .qr-result img { width: min(100%, 18rem); height: auto; border-radius: 1rem; }
+.qr-result .button { width: 100%; }
+.nfc-order-status { margin: .65rem 0; padding: .42rem .55rem; border-radius: .5rem; color: var(--muted); background: rgba(43,33,27,.055); font-size: .68rem; font-weight: 680; }
+.nfc-order-pending { color: #724c18; background: #f4e8ce; }
+.nfc-order-consumed { color: #245d42; background: var(--ready-soft); }
+.nfc-order-action { width: 100%; margin-top: .55rem; }
+.nfc-manager { margin-top: 1.2rem; padding: clamp(1.2rem, 2.5vw, 2rem); border-radius: 1.65rem; background: rgba(255,250,242,.74); box-shadow: 0 1rem 3.5rem rgba(82,55,39,.07); }
+.nfc-manager-header { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 1.35rem; }
+.nfc-manager-header h2 { margin-bottom: .35rem; font-size: clamp(2rem, 3.4vw, 3.25rem); line-height: .98; letter-spacing: -.05em; }
+.nfc-manager-header p:last-child { margin: 0; color: var(--muted); font-size: .86rem; }
+.nfc-feedback { padding: .8rem 1rem; border-radius: .7rem; color: #5a401c; background: #f4e8ce; font-size: .82rem; }
+.nfc-programming { display: grid; gap: .9rem; margin-bottom: 1.25rem; padding: 1.1rem; border: 1px solid rgba(47,112,79,.25); border-radius: 1rem; background: var(--ready-soft); }
+.nfc-programming p { margin: .3rem 0 0; color: #345946; font-size: .8rem; line-height: 1.5; }
+.nfc-programming code { padding: .75rem; overflow-wrap: anywhere; border-radius: .65rem; color: var(--ink); background: rgba(255,255,255,.62); font-size: .75rem; }
+.nfc-programming-actions { display: flex; gap: .6rem; }
+.nfc-manager-grid { display: grid; grid-template-columns: minmax(15rem, .7fr) minmax(18rem, 1.3fr); gap: 1rem; }
+.nfc-register-form { display: grid; gap: .9rem; align-content: start; padding: 1.1rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface-strong); }
+.nfc-register-form h3 { margin: 0; font-size: 1rem; }
+.nfc-register-form label { display: grid; gap: .45rem; color: var(--muted); font-size: .78rem; font-weight: 650; }
+.nfc-register-form input { width: 100%; padding: .8rem .9rem; border: 1px solid var(--line); border-radius: .7rem; color: var(--ink); background: var(--surface); }
+.nfc-tag-list { display: grid; gap: .55rem; align-content: start; }
+.nfc-tag-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1rem; border: 1px solid rgba(217,206,194,.7); border-radius: .85rem; background: var(--surface-strong); }
+.nfc-tag-row p { margin: .2rem 0 0; color: var(--muted); font-size: .75rem; }
+.nfc-tag-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; }
+.nfc-assign-dialog { width: min(100% - 2rem, 28rem); }
+.nfc-unavailable-card h1 { max-width: 13ch; font-size: clamp(2.5rem, 8vw, 4rem); }
+.nfc-unavailable-card > p:not(.eyebrow) { color: var(--muted); line-height: 1.6; }
 
 .finalized-section { margin-top: 1.2rem; padding: clamp(1.2rem, 2.5vw, 2rem); border-radius: 1.65rem; background: rgba(255,250,242,.74); box-shadow: 0 1rem 3.5rem rgba(82,55,39,.07); }
 .finalized-header { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 1.35rem; }
@@ -294,6 +320,8 @@ h1 { max-width: 13ch; margin-bottom: 1.5rem; font-size: clamp(3rem, 7vw, 6.8rem)
   .operator-workspace { grid-template-columns: 1fr; }
   .operator-board { grid-template-columns: 1fr; }
   .create-panel { position: static; }
+  .nfc-manager-header { align-items: stretch; flex-direction: column; gap: 1rem; }
+  .nfc-manager-grid { grid-template-columns: 1fr; }
   .finalized-header { align-items: stretch; flex-direction: column; gap: 1rem; }
   .finalized-controls { justify-items: stretch; }
   .order-search { grid-template-columns: auto 1fr; }
@@ -331,6 +359,8 @@ h1 { max-width: 13ch; margin-bottom: 1.5rem; font-size: clamp(3rem, 7vw, 6.8rem)
   .duration-grid { grid-template-columns: 1fr; }
   .duration-grid div + div { border-top: 1px solid var(--line); border-left: 0; }
   .order-drawer { padding: 1.15rem; }
+  .nfc-programming-actions, .nfc-tag-row { align-items: stretch; flex-direction: column; }
+  .nfc-tag-actions { justify-content: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
