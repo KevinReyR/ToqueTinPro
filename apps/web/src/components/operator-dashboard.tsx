@@ -280,13 +280,6 @@ export function OperatorDashboard() {
           </aside>
         </div>
 
-        {restaurantId && <NfcTagManager
-          restaurantId={restaurantId}
-          assignmentTarget={nfcAssignmentTarget}
-          onAssignmentTargetChange={setNfcAssignmentTarget}
-          onInventoryChange={setNfcInventory}
-        />}
-
         {snapshot && <FinalizedOrders
           orders={snapshot.finalizedOrders}
           timezone={timezone}
@@ -302,6 +295,13 @@ export function OperatorDashboard() {
             void loadSnapshot({ selectedRestaurantId: restaurantId, search: debouncedQuery, status: filter, cursor: snapshot.nextCursor, append: true });
           }}
           onOpen={(order) => void loadDetail(order)}
+        />}
+
+        {restaurantId && <NfcTagManager
+          restaurantId={restaurantId}
+          assignmentTarget={nfcAssignmentTarget}
+          onAssignmentTargetChange={setNfcAssignmentTarget}
+          onInventoryChange={setNfcInventory}
         />}
       </main>
 
